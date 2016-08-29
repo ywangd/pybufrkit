@@ -1,0 +1,13 @@
+#!decoder
+@include "decode-section-0123.bpcl"
+
+section 4 {
+    section4_length = read_uint(24)
+    section4_reserved_bits = read_bin(8)
+    decode_data_stream(n_subsets, is_compressed)
+}
+
+section 5 {
+    stop_signature = read_string(4)
+    assert stop_signature == b'7777', 'signature {!r} != {!r}'.format(stop_signature, b'7777')
+}

@@ -1,0 +1,136 @@
+TEMPLATE [V]Virtual
+    [1]307080 [V](Sequence for representation of synoptic reports from a fixed land station suitable for SYNOP data)
+        [1]301090 [V](Surface station identification; time, horizontal and vertical coordinates)
+            [1]301004 [V](Surface station identification)
+                [1]001001 WMO BLOCK NUMBER
+                [2]001002 WMO STATION NUMBER
+                [3]001015 STATION OR SITE NAME
+                [4]002001 TYPE OF STATION
+            [2]301011 [V](Year, month, day)
+                [1]004001 YEAR
+                [2]004002 MONTH
+                [3]004003 DAY
+            [3]301012 [V](Hour, minute)
+                [1]004004 HOUR
+                [2]004005 MINUTE
+            [4]301021 [V](Latitude/longitude (high accuracy))
+                [1]005001 LATITUDE (HIGH ACCURACY)
+                [2]006001 LONGITUDE (HIGH ACCURACY)
+            [5]007030 HEIGHT OF STATION GROUND ABOVE MEAN SEA LEVEL
+            [6]007031 HEIGHT OF BAROMETER ABOVE MEAN SEA LEVEL
+        [2]302031 [V](Pressure information)
+            [1]302001 [V](Pressure and 3-hour pressure change)
+                [1]010004 PRESSURE
+                [2]010051 PRESSURE REDUCED TO MEAN SEA LEVEL
+                [3]010061 3-HOUR PRESSURE CHANGE
+                [4]010063 CHARACTERISTIC OF PRESSURE TENDENCY
+            [2]010062 24-HOUR PRESSURE CHANGE
+            [3]007004 PRESSURE
+            [4]010009 GEOPOTENTIAL HEIGHT
+        [3]302035 [V](Basic synoptic""instantaneous""data)
+            [1]302032 [V](Temperature and humidity data)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]012101 TEMPERATURE/AIR TEMPERATURE
+                [3]012103 DEWPOINT TEMPERATURE
+                [4]013003 RELATIVE HUMIDITY
+            [2]302033 [V](Visibility data)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]020001 HORIZONTAL VISIBILITY
+            [3]302034 [V](Precipitation past 24 hours)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]013023 TOTAL PRECIPITATION PAST 24 HOURS
+            [4]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+            [5]302004 [V](General cloud information)
+                [1]020010 CLOUD COVER (TOTAL)
+                [2]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+                [3]020011 CLOUD AMOUNT
+                [4]020013 HEIGHT OF BASE OF CLOUD
+                [5]020012 CLOUD TYPE
+                [6]020012 CLOUD TYPE
+                [7]020012 CLOUD TYPE
+            [6]101000
+            ....[0]031001 DELAYED DESCRIPTOR REPLICATION FACTOR
+                [1]302005 [V](Cloud layer)
+                    [1]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+                    [2]020011 CLOUD AMOUNT
+                    [3]020012 CLOUD TYPE
+                    [4]020013 HEIGHT OF BASE OF CLOUD
+        [4]302036 [V](Clouds with bases below station level)
+            [1]105000
+            ....[0]031001 DELAYED DESCRIPTOR REPLICATION FACTOR
+                [1]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+                [2]020011 CLOUD AMOUNT
+                [3]020012 CLOUD TYPE
+                [4]020014 HEIGHT OF TOP OF CLOUD
+                [5]020017 CLOUD TOP DESCRIPTION
+        [5]302047 [V](Direction of cloud drift)
+            [1]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+            [2]020054 TRUE DIRECTION FROM WHICH A PHENOMENON OR CLOUDS ARE MOVING OR IN WHICH THEY ARE OBSERVED
+            [3]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+            [4]020054 TRUE DIRECTION FROM WHICH A PHENOMENON OR CLOUDS ARE MOVING OR IN WHICH THEY ARE OBSERVED
+            [5]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+            [6]020054 TRUE DIRECTION FROM WHICH A PHENOMENON OR CLOUDS ARE MOVING OR IN WHICH THEY ARE OBSERVED
+        [6]008002 VERTICAL SIGNIFICANCE (SURFACE OBSERVATIONS)
+        [7]302048 [V](Direction and elevation of cloud)
+            [1]005021 BEARING OR AZIMUTH
+            [2]007021 ELEVATION
+            [3]020012 CLOUD TYPE
+            [4]005021 BEARING OR AZIMUTH
+            [5]007021 ELEVATION
+        [8]302037 [V](State of ground, snow depth, ground minimum temperature)
+            [1]020062 STATE OF THE GROUND (WITH OR WITHOUT SNOW)
+            [2]013013 TOTAL SNOW DEPTH
+            [3]012113 GROUND MINIMUM TEMPERATURE, PAST 12 HOURS
+        [9]302043 [V](Basic synoptic""period""data)
+            [1]302038 [V](Present and past weather)
+                [1]020003 PRESENT WEATHER
+                [2]004024 TIME PERIOD OR DISPLACEMENT
+                [3]020004 PAST WEATHER (1)
+                [4]020005 PAST WEATHER (2)
+            [2]101002 [V]
+                [1]302039 [V](Sunshine data (from 1 hour and 24 hour period))
+                    [1]004024 TIME PERIOD OR DISPLACEMENT
+                    [2]014031 TOTAL SUNSHINE
+            [3]302040 [V](Precipitation measurement)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]102002 [V]
+                    [1]004024 TIME PERIOD OR DISPLACEMENT
+                    [2]013011 TOTAL PRECIPITATION/TOTAL WATER EQUIVALENT
+            [4]302041 [V](Extreme temperature data)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]004024 TIME PERIOD OR DISPLACEMENT
+                [3]004024 TIME PERIOD OR DISPLACEMENT
+                [4]012111 MAXIMUM TEMPERATURE, AT HEIGHT AND OVER PERIOD SPECIFIED
+                [5]004024 TIME PERIOD OR DISPLACEMENT
+                [6]004024 TIME PERIOD OR DISPLACEMENT
+                [7]012112 MINIMUM TEMPERATURE, AT HEIGHT AND OVER PERIOD SPECIFIED
+            [5]302042 [V](Wind data)
+                [1]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+                [2]002002 TYPE OF INSTRUMENTATION FOR WIND MEASUREMENT
+                [3]008021 TIME SIGNIFICANCE
+                [4]004025 TIME PERIOD OR DISPLACEMENT
+                [5]011001 WIND DIRECTION
+                [6]011002 WIND SPEED
+                [7]008021 TIME SIGNIFICANCE
+                [8]103002 [V]
+                    [1]004025 TIME PERIOD OR DISPLACEMENT
+                    [2]011043 MAXIMUM WIND GUST DIRECTION
+                    [3]011041 MAXIMUM WIND GUST SPEED
+            [6]007032 HEIGHT OF SENSOR ABOVE LOCAL GROUND (OR DECK OF MARINE PLATFORM)
+        [10]302044 [V](Evaporation data)
+            [1]004024 TIME PERIOD OR DISPLACEMENT
+            [2]002004 TYPE OF INSTRUMENTATION FOR EVAPORATION MEASUREMENT OR TYPE OF CROP FOR WHICH EVAPOTRANSPIRATION IS REPORTED
+            [3]013033 EVAPORATION/EVAPOTRANSPIRATION
+        [11]101002 [V]
+            [1]302045 [V](Radiation data (from 1 hour and 24 hour period))
+                [1]004024 TIME PERIOD OR DISPLACEMENT
+                [2]014002 LONG-WAVE RADIATION, INTEGRATED OVER PERIOD SPECIFIED
+                [3]014004 SHORT-WAVE RADIATION, INTEGRATED OVER PERIOD SPECIFIED
+                [4]014016 NET RADIATION, INTEGRATED OVER PERIOD SPECIFIED
+                [5]014028 GLOBAL SOLAR RADIATION (HIGH ACCURACY), INTEGRATED OVER PERIOD SPECIFIED
+                [6]014029 DIFFUSE SOLAR RADIATION (HIGH ACCURACY), INTEGRATED OVER PERIOD SPECIFIED
+                [7]014030 DIRECT SOLAR RADIATION (HIGH ACCURACY), INTEGRATED OVER PERIOD SPECIFIED
+        [12]302046 [V](Temperature change)
+            [1]004024 TIME PERIOD OR DISPLACEMENT
+            [2]004024 TIME PERIOD OR DISPLACEMENT
+            [3]012049 TEMPERATURE CHANGE OVER SPECIFIED PERIOD

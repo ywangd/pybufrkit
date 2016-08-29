@@ -1,0 +1,27 @@
+{
+    "description": "BUFR Table D - List of common sequences",
+    "headers": ["F", "X", "Category of sequences"],
+    "entries": [
+        ["3", "00", "BUFR table entries sequences"],
+        ["3", "01", "Location and identification sequences"],
+        ["3", "02", "Meteorological sequences common to surface data"],
+        ["3", "03", "Meteorological sequences common to vertical soundings data"],
+        ["3", "04", "Meteorological sequences common to satellite observations"],
+        ["3", "05", "Meteorological or hydrological sequences common to hydrological observations"],
+        ["3", "06", "Meteorological or oceanographic sequences common to oceanographic observations"],
+        ["3", "07", "Surface report sequences (land)"],
+        ["3", "08", "Surface report sequences (sea)"],
+        ["3", "09", "Vertical sounding sequences (conventional data)"],
+        ["3", "10", "Vertical sounding sequences (satellite data) "],
+        ["3", "11", "Single level report sequences (conventional data) "],
+        ["3", "12", "Single level report sequences (satellite data) "],
+        ["3", "13", "Sequences common to image data "],
+        ["3", "14", "Reserved "],
+        ["3", "15", "Oceanographic report sequences "],
+        ["3", "16", "Synoptic feature sequences"],
+        ["3", "18", "Radiological report sequences"],
+        ["3", "21", "Radar report sequences"],
+        ["3", "22", "Chemical and aerosol sequences"],
+        ["3", "40", "Additional satellite report sequences"]
+    ]
+}

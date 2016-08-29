@@ -1,0 +1,114 @@
+42  # trailing comments
+## Module(body=[Expr(value=Num(n=42))])
+
+# comment is ignored
+42.0
+## Module(body=[Expr(value=Num(n=42.0))])
+
+.42
+## Module(body=[Expr(value=Num(n=0.42))])
+
+42.0E+5
+## Module(body=[Expr(value=Num(n=4200000.0))])
+
+--1
+## Module(body=[Expr(value=UnaryOp(op=USub(), operand=Num(n=-1)))])
+
+'string'
+## Module(body=[Expr(value=Str(s='string'))])
+
+"string"
+## Module(body=[Expr(value=Str(s='string'))])
+
+name
+## Module(body=[Expr(value=Name(id='name', ctx=Load()))])
+
+a.x
+## Module(body=[Expr(value=Attribute(value=Name(id='a', ctx=Load()), attr='x', ctx=Load()))])
+
+f()
+## Module(body=[Expr(value=Call(func=Name(id='f', ctx=Load()), args=[], keywords=[], starargs=None, kwargs=None))])
+
+f(1)
+## Module(body=[Expr(value=Call(func=Name(id='f', ctx=Load()), args=[Num(n=1)], keywords=[], starargs=None, kwargs=None))])
+
+f(1, k=2)
+## Module(body=[Expr(value=Call(func=Name(id='f', ctx=Load()), args=[Num(n=1)], keywords=[keyword(arg='k', value=Num(n=2))], starargs=None, kwargs=None))])
+
+a[1]
+## Module(body=[Expr(value=Subscript(value=Name(id='a', ctx=Load()), slice=Index(value=Num(n=1)), ctx=Load()))])
+
+a[1:10:3]
+## Module(body=[Expr(value=Subscript(value=Name(id='a', ctx=Load()), slice=Slice(lower=Num(n=1), upper=Num(n=10), step=Num(n=3)), ctx=Load()))])
+
+a[:]
+## Module(body=[Expr(value=Subscript(value=Name(id='a', ctx=Load()), slice=Slice(lower=None, upper=None, step=None), ctx=Load()))])
+
+a[::]
+## Module(body=[Expr(value=Subscript(value=Name(id='a', ctx=Load()), slice=Slice(lower=None, upper=None, step=Name(id='None', ctx=Load())), ctx=Load()))])
+
+f[2](x, y)[3:10:2]
+## Module(body=[Expr(value=Subscript(value=Call(func=Subscript(value=Name(id='f', ctx=Load()), slice=Index(value=Num(n=2)), ctx=Load()), args=[Name(id='x', ctx=Load()), Name(id='y', ctx=Load())], keywords=[], starargs=None, kwargs=None), slice=Slice(lower=Num(n=3), upper=Num(n=10), step=Num(n=2)), ctx=Load()))])
+
+1 + 2
+## Module(body=[Expr(value=BinOp(left=Num(n=1), op=Add(), right=Num(n=2)))])
+
+1 + 2 * 3
+## Module(body=[Expr(value=BinOp(left=Num(n=1), op=Add(), right=BinOp(left=Num(n=2), op=Mult(), right=Num(n=3))))])
+
+1 * (2 + 3)
+## Module(body=[Expr(value=BinOp(left=Num(n=1), op=Mult(), right=BinOp(left=Num(n=2), op=Add(), right=Num(n=3))))])
+
+a == b < 10
+## Module(body=[Expr(value=Compare(left=Name(id='a', ctx=Load()), ops=[Eq(), Lt()], comparators=[Name(id='b', ctx=Load()), Num(n=10)]))])
+
+3 * 4**5
+## Module(body=[Expr(value=BinOp(left=Num(n=3), op=Mult(), right=BinOp(left=Num(n=4), op=Pow(), right=Num(n=5))))])
+
+not 1 and 2 or 3
+## Module(body=[Expr(value=BoolOp(op=Or(), values=[BoolOp(op=And(), values=[UnaryOp(op=Not(), operand=Num(n=1)), Num(n=2)]), Num(n=3)]))])
+
+x = 42
+## Module(body=[Assign(targets=[Name(id='x', ctx=Store())], value=Num(n=42))])
+
+assert x == y
+## Module(body=[Assert(test=Compare(left=Name(id='x', ctx=Load()), ops=[Eq()], comparators=[Name(id='y', ctx=Load())]), msg=None)])
+
+if x {}
+## Module(body=[If(test=Name(id='x', ctx=Load()), body=[], orelse=[])])
+
+if x {
+}
+## Module(body=[If(test=Name(id='x', ctx=Load()), body=[], orelse=[])])
+
+if x { 1 }
+## Module(body=[If(test=Name(id='x', ctx=Load()), body=[Expr(value=Num(n=1))], orelse=[])])
+
+if x { 1 } elif y { 2 } else { 3 }
+## Module(body=[If(test=Name(id='x', ctx=Load()), body=[Expr(value=Num(n=1))], orelse=[If(test=Name(id='y', ctx=Load()), body=[Expr(value=Num(n=2))], orelse=[Expr(value=Num(n=3))])])])
+
+if x {
+
+    a = 2
+    b = 3
+
+} else {
+    a = 3
+
+    b = 2
+}
+## Module(body=[If(test=Name(id='x', ctx=Load()), body=[Assign(targets=[Name(id='a', ctx=Store())], value=Num(n=2)), Assign(targets=[Name(id='b', ctx=Store())], value=Num(n=3))], orelse=[Assign(targets=[Name(id='a', ctx=Store())], value=Num(n=3)), Assign(targets=[Name(id='b', ctx=Store())], value=Num(n=2))])])
+
+for x in y {}
+## Module(body=[For(target=Name(id='x', ctx=Store()), iter=Name(id='y', ctx=Load()), body=[], orelse=[])])
+
+for x in y {
+    a = 2
+}
+## Module(body=[For(target=Name(id='x', ctx=Store()), iter=Name(id='y', ctx=Load()), body=[Assign(targets=[Name(id='a', ctx=Store())], value=Num(n=2))], orelse=[])])
+
+section 1 {
+    print 42
+    a = "hello"
+}
+## Module(body=[With(context_expr=Call(func=Name(id='_section', ctx=Load()), args=[Num(n=1)], keywords=[], starargs=None, kwargs=None), optional_vars=None, body=[Print(dest=None, values=[Num(n=42)], nl=True), Assign(targets=[Name(id='a', ctx=Store())], value=Str(s='hello'))])])

@@ -1,0 +1,8 @@
+#!decoder
+@include "decode-section-0123.bpcl"
+
+section 4 {
+    section4_length = read_uint(24)
+    section4_reserved_bits = read_bin(8)
+}
+template build

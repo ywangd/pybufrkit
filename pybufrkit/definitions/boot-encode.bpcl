@@ -1,0 +1,123 @@
+#!encoder
+section 0 {
+    write_string('BUFR')
+    skip(24)  # the length has to be calculated at the end
+    edition = write_uint($[2], 8)
+}
+
+section 1 {
+    if edition > 1 {
+        skip(24)
+        master_table_number = write_uint($[1], 8)
+    }
+
+    # TODO: the different edition must be handled entire
+    # differently due to the index counting difference.
+    # Currently only really count for edition 4
+    if edition >= 4 {
+        originating_centre = write_uint($[2], 16)
+        originating_subcentre = write_uint($[3], 16)
+        update_sequence_number = write_uint($[4], 8)
+        is_section2_available = write_bool($[5])
+        section1_reserved_bits = write_bin($[6])
+        data_category = write_uint($[7], 8)
+        data_i18n_subcategory = write_uint($[8], 8)
+        data_local_subcategory = write_uint($[9], 8)
+        master_table_version = write_uint($[10], 8)
+        local_table_version = write_uint($[11], 8)
+        year = write_uint($[12], 16)
+        month = write_uint($[13], 8)
+        day = write_uint($[14], 8)
+        hour = write_uint($[15], 8)
+        minute = write_uint($[16], 8)
+        second = write_uint($[17], 8)
+
+    } elif edition == 3 {
+        originating_subcentre = write_uint($[2], 8)
+        originating_centre = write_uint($[3], 8)
+        update_sequence_number = write_uint($[4], 8)
+        is_section2_available = write_bool($[5])
+        section1_reserved_bits = write_bin($[6])
+        data_category = write_uint($[7], 8)
+        data_local_subcategory = write_uint($[8], 8)
+        master_table_version = write_uint($[9], 8)
+        local_table_version = write_uint($[10], 8)
+        year = write_uint($[11], 8)
+        month = write_uint($[12], 8)
+        day = write_uint($[13], 8)
+        hour = write_uint($[14], 8)
+        minute = write_uint($[15], 8)
+        second = write_uint($[16], 8)
+
+    } elif edition == 2 {
+        originating_centre = write_uint($[2], 16)
+        update_sequence_number = write_uint($[3], 8)
+        is_section2_available = write_bool($[4])
+        section1_reserved_bits = write_bin($[5])
+        data_category = write_uint($[6], 8)
+        data_local_subcategory = write_uint($[7], 8)
+        master_table_version = write_uint($[8], 8)
+        local_table_version = write_uint($[9], 8)
+        year = write_uint($[10], 8)
+        month = write_uint($[11], 8)
+        day = write_uint($[12], 8)
+        hour = write_uint($[13], 8)
+        minute = write_uint($[14], 8)
+        second = write_uint($[15], 8)
+
+    } else {
+        originating_centre = write_uint($[0], 16)
+        update_sequence_number = write_uint($[1], 8)
+        is_section2_available = write_bool($[2])
+        section1_reserved_bits = write_bin($[3])
+        data_category = write_uint($[4], 8)
+        data_local_subcategory = write_uint($[5], 8)
+        master_table_version = write_uint($[6], 8)
+        local_table_version = write_uint($[7], 8)
+        year = write_uint($[8], 8)
+        month = write_uint($[9], 8)
+        day = write_uint($[10], 8)
+        hour = write_uint($[11], 8)
+        minute = write_uint($[12], 8)
+        second = write_uint($[13], 8)
+    }
+
+    # TODO: At the end, it should automatically fill the skipped length
+
+    load_bufr_tables(master_table_number, \
+                     originating_centre, \
+                     originating_subcentre, \
+                     master_table_version, \
+                     local_table_version,
+                     0)
+}
+
+if is_section2_available {
+    section 2 {
+        skip(24)
+        section2_reserved_bits = write_bin($[1])
+        # local section can be defined here, otherwise it is left out by setting the length
+        # of this section to (24 + 8) / 4 = 8 octets
+    }
+}
+
+section 3 {
+    skip(24)
+    section3_reserved_bits = write_bin($[1])
+    n_subsets = write_uint($[2], 16)
+    is_observation = write_bool($[3])
+    is_compressed = write_bool($[4])
+    section3_flag_bits = write_bin($[5])
+    unexpanded_descriptors = write_unexpanded_descriptors($[6])
+}
+
+section 4 {
+    skip(24)
+    section4_reserved_bits = write_bin($[1])
+    encode_data_stream($[2], is_compressed)
+}
+
+section 5 {
+    write_string('7777')
+}
+# TODO: Now its time to fill the overall length

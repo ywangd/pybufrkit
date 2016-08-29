@@ -1,0 +1,9 @@
+include MANIFEST.in
+include README.md
+include LICENSE
+
+recursive-include docs *
+
+recursive-include pybufrkit/definitions *.bpcl
+recursive-include pybufrkit/tables *
+recursive-include tests *

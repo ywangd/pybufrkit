@@ -1,0 +1,73 @@
+section 0 {
+    start_signature = read_string(4)
+    assert start_signature == b'BUFR', 'signature {!r} != {!r}'.format(start_signature, b'BUFR')
+    length = read_uint(24)
+    edition = read_uint(8)
+}
+
+section 1 {
+    # TODO: maybe should remove the support for BUFR edition 1
+    if edition > 1 {
+        section1_length = read_uint(24)
+        master_table_number = read_uint(8)
+    }
+
+    if edition >= 4 {
+        originating_centre = read_uint(16)
+        originating_subcentre = read_uint(16)
+    } elif edition == 3 {
+        originating_subcentre = read_uint(8)
+        originating_centre = read_uint(8)
+    } elif edition == 2 {
+        originating_centre = read_uint(16)
+    } else {
+        originating_centre = read_uint(16)
+    }
+    update_sequence_number = read_uint(8)
+    is_section2_available = read_bool()
+    section1_flag_bits = read_bin(7)
+    data_category = read_uint(8)
+    if edition == 4 {
+        data_i18n_subcategory = read_uint(8)
+    }
+    data_local_subcategory = read_uint(8)
+    master_table_version = read_uint(8)
+    local_table_version = read_uint(8)
+    if edition >= 4 {
+        year = read_uint(16)
+    } else {
+        year = read_uint(8)
+    }
+    month = read_uint(8)
+    day = read_uint(8)
+    hour = read_uint(8)
+    minute = read_uint(8)
+    second = read_uint(8)
+
+    load_bufr_tables(master_table_number, \
+                     originating_centre, \
+                     originating_subcentre, \
+                     master_table_version, \
+                     local_table_version,
+                     1)
+}
+
+if is_section2_available {
+    section 2 {
+        section2_length = read_uint(24)
+        section2_reserved_bits = read_bin(8)
+        # local section can be defined here or it can be skipped by default
+        # section2_data = read_bin(section2_length * 8 - 32)
+    }
+}
+
+section 3 {
+    section3_length = read_uint(24)
+    section3_reserved_bits = read_bin(8)
+    n_subsets = read_uint(16)
+    is_observation = read_bool()
+    is_compressed = read_bool()
+    section3_flag_bits = read_bin(6)
+    # The unexpanded descriptors must be read before S4 data can be decoded
+    unexpanded_descriptors = read_unexpanded_descriptors()
+}

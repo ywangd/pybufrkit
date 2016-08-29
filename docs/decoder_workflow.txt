@@ -1,0 +1,18 @@
+participant User (icon=human) 
+participant Decoder
+participant Script
+
+User->Decoder: Initialise
+Decoder->Decoder: Setting up runtime\nenvironment for Script
+Decoder->Decoder: Load and compile Script
+User->Decoder: Feed BUFR Message
+Decoder->Script: Run with contents of the BUFR message
+
+loop: [section 0 to 4]
+    Script->Decoder: Instructions
+end
+
+Script->Decoder: Compile Template
+Script->Decoder: Run compiled Template
+Script->Decoder: Instructions for section 5
+Decoder->User: Bufr object with decoded \nvalues of all sections

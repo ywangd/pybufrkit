@@ -1,0 +1,32 @@
+load 'some_bufr_file.bufr'
+section 0 {
+    starting_signature = read_string(4)
+    assert starting_signature == "BUFR"
+}
+section 1 {
+    length = read_uint(24)
+}
+if is_section2_available {
+    section 2 {
+        section2_length = read_uint(24)
+        section2_reserved_bits = read_bin(8)
+    }
+}
+
+section 3 {
+
+}
+
+template build
+template dump, compile
+template build, dump, compile,
+
+
+section 4 {
+}
+
+section 5 {
+    ending_signature = read_string(4)
+    assert ending_signature == "7777"
+}
+

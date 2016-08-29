@@ -1,0 +1,3 @@
+a = 0
+@include 'preprocessor_tests_02.bpcl'
+c = 3
