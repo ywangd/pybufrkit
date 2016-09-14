@@ -1,7 +1,7 @@
 # Python Toolkit for WMO BUFR Messages
 
 **Pure** Python package to decode and encode WMO BUFR (FM-94) messages. It can be used
-as both a command line tool or a library.  
+as both a command line tool or library to decode and encode BUFR messages.
 
 
 ## Installation
@@ -35,7 +35,7 @@ To see a full list of available sub-command, run `pybufrkit -h`. Here are a few 
     
 * Encode from a JSON file to BUFR
     - `pybufrkit encode JSON_FILE BUFR_FILE`
-    - `pybufrkit decode BUFR_FILE | pybufrkit encode -`
+    - `pybufrkit decode -j BUFR_FILE | pybufrkit encode -`
     
 * Lookup information for a descriptor
     - `pybufrkit lookup 309052`
