@@ -15,7 +15,7 @@ from .decoder import Decoder
 from .encoder import Encoder
 from .descriptors import ElementDescriptor
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 __author__ = 'ywangd@gmail.com'
 
 # TODO: loggings
@@ -23,7 +23,7 @@ LOGGER = logging.getLogger('PyBufrKit')
 LOGGER.addHandler(logging.NullHandler())  # so testings do not complain about no handler
 
 
-def main(args):
+def main():
     ap = argparse.ArgumentParser(prog=__package__,
                                  description='Python Toolkit for BUFR Messages',
                                  add_help=False)
@@ -150,7 +150,7 @@ def main(args):
     compile_parser.add_argument('--local-table-version',
                                 help='The local table version')
 
-    ns = ap.parse_args(args)
+    ns = ap.parse_args()
 
     if ns.working_directory:
         compiled_template_dir = os.path.join(ns.working_directory, 'compiled_templates')
