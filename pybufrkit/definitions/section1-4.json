@@ -1,0 +1,110 @@
+{
+  "index": 1,
+  "description": "Identification section",
+  "default": true,
+  "optional": false,
+  "parameters": [
+    {
+      "name": "section_length",
+      "nbits": 24,
+      "type": "uint"
+    },
+    {
+      "name": "master_table_number",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "originating_centre",
+      "nbits": 16,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "originating_subcentre",
+      "nbits": 16,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "update_sequence_number",
+      "nbits": 8,
+      "type": "uint"
+    },
+    {
+      "name": "is_section2_presents",
+      "nbits": 1,
+      "type": "bool",
+      "as_property": true
+    },
+    {
+      "name": "flag_bits",
+      "nbits": 7,
+      "type": "bin"
+    },
+    {
+      "name": "data_category",
+      "nbits": 8,
+      "type": "uint"
+    },
+    {
+      "name": "data_i18n_subcategory",
+      "nbits": 8,
+      "type": "uint"
+    },
+    {
+      "name": "data_local_subcategory",
+      "nbits": 8,
+      "type": "uint"
+    },
+    {
+      "name": "master_table_version",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "local_table_version",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "year",
+      "nbits": 16,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "month",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "day",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "hour",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "minute",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "second",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    }
+  ]
+}

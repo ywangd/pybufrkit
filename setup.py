@@ -15,7 +15,7 @@ def get_version():
 
 
 def get_requirements():
-    requirements = ['bitstring>=3.1.3', 'pyparsing>=2.0,<=2.1.7', 'six']
+    requirements = ['bitstring>=3.1.3', 'six']
     if sys.version_info[:2] < (2, 7):
         requirements.append('argparse>=1.2.1')
     return requirements

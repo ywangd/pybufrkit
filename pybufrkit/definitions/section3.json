@@ -1,0 +1,47 @@
+{
+  "index": 3,
+  "description": "Data description section",
+  "default": true,
+  "optional": false,
+  "parameters": [
+    {
+      "name": "section_length",
+      "nbits": 24,
+      "type": "uint"
+    },
+    {
+      "name": "reserved_bits",
+      "nbits": 8,
+      "type": "bin"
+    },
+    {
+      "name": "n_subsets",
+      "nbits": 16,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "is_observation",
+      "nbits": 1,
+      "type": "bool",
+      "as_property": true
+    },
+    {
+      "name": "is_compressed",
+      "nbits": 1,
+      "type": "bool",
+      "as_property": true
+    },
+    {
+      "name": "flag_bits",
+      "nbits": 6,
+      "type": "bin"
+    },
+    {
+      "name": "unexpanded_descriptors",
+      "nbits": 0,
+      "type": "unexpanded_descriptors",
+      "as_property": true
+    }
+  ]
+}

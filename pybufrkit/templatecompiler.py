@@ -1,625 +1,476 @@
-"""
-Compile a BUFR template to a python script that processes files using the
-template. The compiled template can be used for both decoding and decoding for
-both uncompressed and compressed data.
-"""
 from __future__ import absolute_import
-import numbers
-import ast
+from __future__ import print_function
+
+import sys
+import json
+import six
+import logging
 import contextlib
-from collections import namedtuple, OrderedDict
-from six import PY3
-from six.moves import range
 
-from .descriptors import (ElementDescriptor, FixedReplicationDescriptor,
-                          DelayedReplicationDescriptor, OperatorDescriptor,
-                          SequenceDescriptor, AssociatedDescriptor,
-                          SkippedLocalDescriptor)
-from .utils import BpclError
+from pybufrkit.coder import Coder, CoderState
+from pybufrkit.tables import TableGroupKey, get_table_group_by_key
+from pybufrkit.descriptors import Descriptor
 
-__all__ = ['template_compiler']
+__all__ = ['loads_compiled_template', 'TemplateCompiler', 'CompiledTemplateManager', 'process_compiled_template']
 
-# Bitmap definition stage
-BITMAP_NA = 0  # e.g. not in a bitmap definition block
-BITMAP_INDICATOR = 1  # e.g. 222000, 223000
-BITMAP_WAITING_FOR_BIT = 4
-BITMAP_BIT_COUNTING = 5  # processing 031031
-
-# STATUS of QA info follows, 222000
-QA_INFO_NA = 0  # no in QA info follows range
-QA_INFO_WAITING = 1  # after seeing 222000
-QA_INFO_PROCESSING = 2  # after seeing the first class 33 descriptor
-
-# Nbits, Scale and Reference value Modifiers for 207 YYY
-NsrMod = namedtuple('NsrMod', ['nbits_increment', 'scale_increment', 'refval_factor'])
+log = logging.getLogger(__file__)
 
 
-def make_var_name_for_descriptor(descriptor):
+# noinspection PyProtectedMember
+def get_func_name():
     """
-    Make a variable name for the given descriptor
+    Get name of the caller of this function. Helper to create the function call construct.
     """
-    descriptor_type = type(descriptor)
-    if descriptor_type in (ElementDescriptor, AssociatedDescriptor, SkippedLocalDescriptor,
-                           OperatorDescriptor):
-        # The prefix is the first letter of the descriptor's class
-        # So E for ElementDescriptor, A for AssociatedDescriptor, S for SkippedLocalDescriptor
-        # and O for OperatorDescriptor
-        prefix = descriptor_type.__name__[0]
-    else:
-        raise BpclError('Var name is not needed for {} type descriptor'.format(descriptor_type))
-
-    return '{}{:06d}'.format(prefix, descriptor.id)
+    return sys._getframe(1).f_code.co_name
 
 
-@contextlib.contextmanager
-def replication_loop(self, n_repeats=None):
+#############################################################################
+# CompileTemplate and its components
+class Statement(object):
     """
-    :param TemplateCompiler self:
-    :param n_repeats: Number of repeats or None for delayed replication
+    A basic code construct.
     """
-    n0 = len(self.process_worker_stmts)
-    yield
-    body = [self.process_worker_stmts.pop() for _ in range(len(self.process_worker_stmts) - n0)][::-1]
-    node = ast.For(
-        target=ast.Name(id='idx_replication', ctx=ast.Store()),
-        iter=ast.Call(
-            func=ast.Name(id='range', ctx=ast.Load()),
-            args=[
-                ast.Num(n=n_repeats) if n_repeats else ast.Call(
-                    func=ast.Name(id='get_delayed_replication_factor_value', ctx=ast.Load()),
-                    args=[], keywords=[], starargs=None, kwargs=None
-                )
-            ],
-            keywords=[], starargs=None, kwargs=None
-        ),
-        body=body,
-        orelse=[]
-    )
-    self.process_worker_stmts.append(node)
+
+    def to_dict(self):
+        return {'type': self.__class__.__name__}
 
 
-# noinspection PyAttributeOutsideInit,PyTypeChecker
-class TemplateCompiler(object):
-    def compile(self, template, with_ast=True):
-        """
-        Main method of the class.
+class State031031Increment(Statement):
+    """
+    Add one to the 031031 count, n_031031 of the state object.
+    """
 
-        :param pybufrkit.descriptors.BufrTemplate template:
-        :param bool with_ast: whether to return AST tree
-        :return: The function to process the template and optionally the AST tree for
-                 defining the function.
-        """
-        self.compile_preflight()
+    def __str__(self):
+        return 'n_031031 + 1'
 
-        self.compile_members(template.members)
 
-        if PY3:
-            arguments = ast.arguments(
-                args=[], vararg=None,
-                kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])
-            worker_func = ast.FunctionDef(
-                name='worker_func',
-                args=arguments,
-                body=(self.process_worker_stmts if self.process_worker_stmts else
-                      [ast.Pass()]),  # in case data is empty
-                decorator_list=[],
-                returns=None
-            )
+class State031031Reset(Statement):
+    """
+    Reset the 031031 count, n_031031 of the state object, to zero.
+    """
 
-        else:
-            arguments = ast.arguments(
-                args=[], vararg=None, kwarg=None, defaults=[])
-            worker_func = ast.FunctionDef(
-                name='worker_func',
-                args=arguments,
-                body=(self.process_worker_stmts if self.process_worker_stmts else
-                      [ast.Pass()]),  # in case data is empty
-                decorator_list=[]
-            )
+    def __str__(self):
+        return 'n_031031 = 0'
 
-        process_stmt_list = [
-            # The worker function for both compressed and uncompressed
-            worker_func,
-            # User of the worker function that adds a subset loop for uncompressed data
-            ast.If(
-                test=ast.Name(id='is_compressed', ctx=ast.Load()),
-                body=[ast.Expr(value=ast.Call(func=ast.Name(id='worker_func', ctx=ast.Load()),
-                                              args=[], keywords=[], starargs=None, kwargs=None))],
-                orelse=[
-                    ast.For(target=ast.Name(id='idx_subset', ctx=ast.Store()),
-                            iter=ast.Call(
-                                func=ast.Name(id='range', ctx=ast.Load()),
-                                args=[ast.Name(id='n_subsets', ctx=ast.Load())],
-                                keywords=[], starargs=None, kwargs=None),
-                            body=[
-                                ast.Expr(value=ast.Call(
-                                    func=ast.Name(id='switch_subset_context', ctx=ast.Load()),
-                                    args=[ast.Name(id='idx_subset', ctx=ast.Load())],
-                                    keywords=[], starargs=None, kwargs=None)),
-                                ast.Expr(value=ast.Call(
-                                    func=ast.Name(id='worker_func', ctx=ast.Load()),
-                                    args=[], keywords=[], starargs=None, kwargs=None))],
-                            orelse=[])
-                ]
-            )
-        ]
 
-        # TODO: embed vars in the code object, possible??
-        # Add conditional definitions of descriptor variables
-        process_stmt_list = self.compile_descriptor_vars() + process_stmt_list
+class MethodCall(Statement):
+    """
+    A generic method call
+    """
 
-        tree = ast.fix_missing_locations(make_funcdef(process_stmt_list))
-        co = compile(tree, '<template>', mode='exec')
+    def __init__(self, method_name, args=(), state_properties=None):
+        self.method_name = method_name
+        self.args = args
+        self.state_properties = state_properties
 
-        # Get the function by running the function definition
-        exec (co)
-        process_func = locals()['process_template']
-        return (process_func, tree) if with_ast else process_func
-
-    def compile_preflight(self):
-        """
-        Initialize variables before compilation.
-        """
-        self.process_worker_stmts = []
-        self.process_descriptor_vars = OrderedDict()
-
-        self.nbits_offset = 0  # 201 YYY
-        self.scale_offset = 0  # 202 YYY
-
-        # 203 YYY
-        self.nbits_new_refval = 0
-        self.refval_new_ids = []
-
-        self.nbits_associated_list = []  # 204 YYY
-        self.nbits_skipped_local_descriptor = 0  # 206
-
-        self.nsr_modifier = NsrMod(
-            nbits_increment=0, scale_increment=0, refval_factor=1
-        )  # 207 YYY
-        self.nbytes_new = 0  # 208 YYY
-
-        self.data_not_present_count = 0  # 221
-        self.status_qa_info_follows = QA_INFO_NA  # 222
-
-        # bitmap definition
-        self.bitmap_definition_state = BITMAP_NA
-        self.most_recent_bitmap_is_for_reuse = False
-
-    def add_process_worker_call(self, func_name, *args):
-        arguments = []
-        for arg in args:
-            if isinstance(arg, bool):
-                arguments.append(ast.Name(id=str(arg), ctx=ast.Load()))
-            elif isinstance(arg, numbers.Number):
-                arguments.append(ast.Num(n=arg))
-            elif isinstance(arg, ast.AST):
-                arguments.append(arg)
-            else:  # descriptors
-                name = make_var_name_for_descriptor(arg)
-                if name not in self.process_descriptor_vars:
-                    self.process_descriptor_vars[name] = arg
-                arguments.append(ast.Name(id=name, ctx=ast.Load()))
-
-        node = ast.Expr(
-            value=ast.Call(
-                func=ast.Name(id=func_name, ctx=ast.Load()),
-                args=arguments, keywords=[], starargs=None, kwargs=None
-            )
+    def __str__(self):
+        return '{}({})'.format(
+            self.method_name, ','.join(str(x) for x in self.args)
         )
 
-        self.process_worker_stmts.append(node)
+    def to_dict(self):
+        d = super(MethodCall, self).to_dict()
 
-    def compile_init_bitmap_bit_count(self):
-        self.process_worker_stmts.append(
-            ast.Assign(targets=[ast.Name(id='n_031031', ctx=ast.Store())],
-                       value=ast.Num(n=0))
-        )
-
-    def compile_increase_bitmap_bit_count(self):
-        self.process_worker_stmts.append(
-            ast.AugAssign(target=ast.Name(id='n_031031', ctx=ast.Store()),
-                          op=ast.Add(), value=ast.Num(n=1))
-        )
-
-    def compile_descriptor_vars(self):
-        stmts = []
-        for name, descriptor in self.process_descriptor_vars.items():
-            args = [ast.Str(s=name)]
-            if isinstance(descriptor, (AssociatedDescriptor, SkippedLocalDescriptor)):
-                args.append(ast.Num(n=descriptor.nbits))
-
-            node = ast.Assign(
-                targets=[ast.Name(id=name, ctx=ast.Store())],
-                value=ast.Call(
-                    func=ast.Name(id='get_descriptor_by_var_name', ctx=ast.Load()),
-                    args=args,
-                    keywords=[], starargs=None, kwargs=None
-                )
-            )
-            stmts.append(node)
-
-        return stmts
-
-    def compile_define_new_refval(self, descriptor):
-        if descriptor.unit == 'CCITT IA5':
-            raise BpclError('Trying to define new reference value for string type descriptor')
-        # TODO: new descriptor type for defining new refval?
-        self.add_process_worker_call('process_new_refval', descriptor, self.nbits_new_refval)
-
-    def compile_associated_field(self, descriptor):
-        nbits_associated = sum(self.nbits_associated_list)
-        self.add_process_worker_call('process_codeflag',
-                                     AssociatedDescriptor(descriptor.id, nbits_associated),
-                                     nbits_associated)
-
-    def compile_element_descriptor(self, descriptor):
-        X = descriptor.X
-
-        # Read associated field if exists
-        # Page 79 of layer 3 Guide, operators do not apply to class 31 element descriptor
-        if self.nbits_associated_list and X != 31:
-            self.compile_associated_field(descriptor)
-
-        # Handle class 33 codes for QA information follows 222000 operator
-        if X == 33:
-            if self.status_qa_info_follows == QA_INFO_WAITING:
-                self.status_qa_info_follows = QA_INFO_PROCESSING
-            # Add the link between the QA info and its corresponding descriptor
-            if self.status_qa_info_follows == QA_INFO_PROCESSING:
-                self.add_process_worker_call('add_bitmap_link')
+        d.update({
+            'method_name': self.method_name,
+            'args': self.args,
+            'state_properties': self.state_properties,
+        })
+        if len(self.args) > 0 and isinstance(self.args[0], Descriptor):
+            d['args'] = (self.args[0].id,) + self.args[1:]
+            d['with_descriptor'] = True
         else:
-            if self.status_qa_info_follows == QA_INFO_PROCESSING:
-                self.status_qa_info_follows = QA_INFO_NA
+            d['args'] = self.args
+            d['with_descriptor'] = False
 
-        # Now we can process the element normally
-        if descriptor.unit == 'CCITT IA5':
-            nbytes = self.nbytes_new if self.nbytes_new else descriptor.nbits // 8
-            self.add_process_worker_call('process_string',
-                                         descriptor, nbytes)
+        return d
 
-        elif descriptor.unit in ('FLAG TABLE', 'CODE TABLE'):
-            self.add_process_worker_call('process_codeflag',
-                                         descriptor, descriptor.nbits)
 
+class StateMethodCall(MethodCall):
+    """
+    A State object method call.
+    """
+
+    def __str__(self):
+        return 'state.{}'.format(super(StateMethodCall, self).__str__())
+
+
+class CoderMethodCall(MethodCall):
+    """
+    A Coder object method call.
+    """
+
+    def __str__(self):
+        return 'coder.{}'.format(super(CoderMethodCall, self).__str__())
+
+
+class Block(Statement):
+    """
+    A Block is a list of Statement
+    """
+
+    def __init__(self):
+        self.statements = []
+
+    def add_statement(self, statement):
+        self.statements.append(statement)
+
+    def __str__(self):
+        return '[{}]'.format(','.join(str(x) for x in self.statements))
+
+    def to_dict(self):
+        d = super(Block, self).to_dict()
+        d.update({
+            'statements': [statement.to_dict() for statement in self.statements]
+        })
+        return d
+
+
+class Loop(Block):
+    """
+    A loop construct has a loop variable and a block of statements to
+    execute within the loop. The loop variable can be either a constant
+    or a function call that returns the actual value for the loop counter.
+    """
+
+    def __init__(self, repeat):
+        super(Loop, self).__init__()
+        self.repeat = repeat
+
+    def __str__(self):
+        return '<{}, {}>'.format(self.repeat, super(Loop, self).__str__())
+
+    def to_dict(self):
+        d = super(Loop, self).to_dict()
+        d.update({
+            'repeat': self.repeat.to_dict() if issubclass(type(self.repeat), MethodCall) else self.repeat
+        })
+        return d
+
+
+class CompiledTemplate(Block):
+    """
+    This class represents a compiled template.
+
+    :param descriptors.BufrTemplate template: The template to compile
+    """
+
+    def __init__(self, table_group_key, template):
+        super(CompiledTemplate, self).__init__()
+        self.table_group_key = table_group_key
+        self.template = template
+
+    def to_dict(self):
+        d = super(CompiledTemplate, self).to_dict()
+        d.update({
+            'table_group_key': self.table_group_key,
+            'template_ids': self.template.original_descriptor_ids
+        })
+        return d
+
+
+#############################################################################
+# Template Compiler and helpers.
+class CompilerState(CoderState):
+    """
+    A state class that is specifically for the TemplateCompiler. It helps
+    to records all calls dispatched from the generic Coder and TemplateCompiler.
+    """
+
+    def __init__(self, table_group, template):
+        super(CompilerState, self).__init__(False, 1)
+        self.block_stack = [CompiledTemplate(table_group.key, template)]
+
+    @property
+    def compiled_template(self):
+        assert len(self.block_stack) == 1, 'Code block stack must be 1 (was {})'.format(len(self.block_stack))
+        return self.block_stack[0]
+
+    @contextlib.contextmanager
+    def new_loop(self, repeat):
+        loop = Loop(repeat)
+        self.block_stack[-1].add_statement(loop)
+        self.block_stack.append(loop)
+        yield loop
+        self.block_stack.pop()
+
+    def add_statement(self, statement):
+        self.block_stack[-1].add_statement(statement)
+
+    def mark_back_reference_boundary(self):
+        self.add_statement(StateMethodCall(get_func_name()))
+
+    def recall_bitmap(self):
+        self.add_statement(StateMethodCall(get_func_name()))
+
+    def cancel_bitmap(self):
+        self.add_statement(StateMethodCall(get_func_name()))
+
+    def cancel_all_back_references(self):
+        self.add_statement(StateMethodCall(get_func_name()))
+
+    def add_bitmap_link(self):
+        self.add_statement(StateMethodCall(get_func_name()))
+
+
+class TemplateCompiler(Coder):
+    """
+    The compiler for the BUFR Template. This class does its job by recording
+    calls from the generic Coder.
+    """
+
+    def __init__(self):
+        super(TemplateCompiler, self).__init__(None, None)
+
+    def process(self, template, table_group):
+        """
+        Entry point of the Compiler.
+
+        :param descriptors.BufrTemplate template: The BUFR template to compile
+        :param tables.TableGroup table_group: The Table Group used to instantiate the Template.
+        :return: CompiledTemplate
+        """
+        state = CompilerState(table_group, template)
+        self.process_template(state, bit_operator=None, template=template)
+
+        return state.compiled_template
+
+    def process_section(self, bufr_message, bit_operator, section):
+        pass
+
+    def process_bitmap_definition(self, state, bit_operator, descriptor):
+        n_031031 = state.n_031031
+        super(TemplateCompiler, self).process_bitmap_definition(state, bit_operator, descriptor)
+        if state.n_031031 == 0:
+            state.add_statement(State031031Reset())
+        elif state.n_031031 == n_031031 + 1:
+            state.add_statement(State031031Increment())
+        elif state.n_031031 == n_031031:
+            pass
         else:
-            nbits = descriptor.nbits + \
-                    self.nbits_offset + \
-                    self.nsr_modifier.nbits_increment
-            scale = descriptor.scale + \
-                    self.scale_offset + \
-                    self.nsr_modifier.scale_increment
-            scale_powered = 1.0 * 10 ** scale
+            raise RuntimeError('erroneous n_031031 change')
 
-            if descriptor.id not in self.refval_new_ids:  # no new refval is defined for this descriptor
-                refval = descriptor.refval * self.nsr_modifier.refval_factor
-                self.add_process_worker_call('process_numeric',
-                                             descriptor, nbits, scale_powered, refval)
+    def process_fixed_replication_descriptor(self, state, bit_operator, descriptor):
+        with state.new_loop(descriptor.n_repeats):
+            self.process_members(state, bit_operator, descriptor.members)
 
-            else:  # a new refval is defined for the descriptor, it must be retrieved at runtime
-                self.add_process_worker_call('process_numeric_with_new_refval',
-                                             descriptor, nbits, scale_powered,
-                                             self.nsr_modifier.refval_factor)
-
-    def compile_fixed_replication_descriptor(self, descriptor):
-        """
-        :param FixedReplicationDescriptor descriptor:
-        """
-        with replication_loop(self, descriptor.n_repeats):
-            self.compile_members(descriptor.members)
-
-    def compile_delayed_replication_descriptor(self, descriptor):
-        """
-        :param DelayedReplicationDescriptor descriptor:
-        """
+    def process_delayed_replication_descriptor(self, state, bit_operator, descriptor):
         # TODO: delayed repetition descriptor 031011, 031012
         if descriptor.id in (31011, 31012):
             raise NotImplementedError('delayed repetition descriptor')
 
-        self.compile_element_descriptor(descriptor.factor)
-        with replication_loop(self):
-            self.compile_members(descriptor.members)
+        self.process_element_descriptor(state, bit_operator, descriptor.factor)
+        with state.new_loop(CoderMethodCall('get_value_for_delayed_replication_factor')):
+            self.process_members(state, bit_operator, descriptor.members)
 
-    def compile_sequence_descriptor(self, descriptor):
-        self.compile_members(descriptor.members)
+    def process_bitmapped_descriptor(self, state, bit_operator, descriptor):
+        state_properties = {
+            'new_bytes': state.new_nbytes,
+            'nbits_offset': state.nbits_offset,
+            'scale_offset': state.scale_offset,
+            'bsr_modifier': state.bsr_modifier,
+        }
+        state.add_statement(
+            CoderMethodCall(get_func_name(), (descriptor,), state_properties=state_properties)
+        )
 
-    def compile_operator_descriptor(self, descriptor):
+    def get_value_for_delayed_replication_factor(self, state):
+        pass
+
+    def define_bitmap(self, state, reuse):
+        state.add_statement(
+            CoderMethodCall(get_func_name(), (reuse,))
+        )
+
+    def process_numeric(self, state, bit_operator, descriptor, nbits, scale_powered, refval):
+        state.add_statement(
+            CoderMethodCall(get_func_name(), (descriptor, nbits, scale_powered, refval))
+        )
+
+    def process_string(self, state, bit_operator, descriptor, nbytes):
+        state.add_statement(CoderMethodCall(get_func_name(), (descriptor, nbytes)))
+
+    def process_codeflag(self, state, bit_operator, descriptor, nbits):
+        state.add_statement(CoderMethodCall(get_func_name(), (descriptor, nbits)))
+
+    def process_new_refval(self, state, bit_operator, descriptor, nbits):
+        state.add_statement(CoderMethodCall(get_func_name(), (descriptor, nbits)))
+
+    def process_numeric_of_new_refval(self, state, bit_operator,
+                                      descriptor, nbits, scale_powered,
+                                      refval_factor):
+        state.add_statement(
+            CoderMethodCall(get_func_name(), (descriptor, nbits, scale_powered, refval_factor))
+        )
+
+    def process_constant(self, state, bit_operator, descriptor, value):
+        state.add_statement(CoderMethodCall(get_func_name(), (descriptor, value)))
+
+
+# #############################################################################
+# Functions to execute a compiled template.
+def process_compiled_template(coder, state, bit_operator, compiled_template):
+    """
+    This function runs the compiled code from the TemplateCompiler
+
+    :param Coder coder:
+    :param VmState state:
+    :param bit_operator:
+    :param Block compiled_template:
+    """
+    process_statements(coder, state, bit_operator, compiled_template.statements)
+
+
+def process_statements(coder, state, bit_operator, statements):
+    """
+    Process through a list of statements. Recursively call itself if the sub-statement
+    is itself a list of statements.
+    """
+    for statement in statements:
+        if isinstance(statement, MethodCall):
+            # Populate any necessary state properties. This is to re-create the
+            # modifier effects of operator descriptors.
+            if statement.state_properties is not None:
+                for k, v in statement.state_properties.items():
+                    setattr(state, k, v)
+
+            if type(statement) is StateMethodCall:
+                getattr(state, statement.method_name)(*statement.args)
+
+            elif type(statement) is CoderMethodCall:
+                if issubclass(type(statement.args[0]), Descriptor):
+                    getattr(coder, statement.method_name)(state, bit_operator, *statement.args)
+                else:
+                    getattr(coder, statement.method_name)(state, *statement.args)
+            else:
+                raise RuntimeError('Unknown statement: {}'.format(statement))
+
+        elif isinstance(statement, State031031Reset):
+            state.n_031031 = 0
+
+        elif isinstance(statement, State031031Increment):
+            state.n_031031 += 1
+
+        elif type(statement) is Loop:
+            if isinstance(statement.repeat, CoderMethodCall):
+                repeat = getattr(coder, statement.repeat.method_name)(state)
+            else:
+                repeat = statement.repeat
+
+            for _ in range(repeat):
+                process_statements(coder, state, bit_operator, statement.statements)
+
+        else:
+            raise RuntimeError('Unknown statement: {}'.format(statement))
+
+
+#############################################################################
+# Management for compiled templates
+class CompiledTemplateManager(object):
+    """
+    A management class for compiled templates that handles caching and lookup.
+
+    :param cache_max: The maximum number of compiled templates to cache.
+    """
+
+    def __init__(self, cache_max):
+        self.template_compiler = TemplateCompiler()
+        self.cache_max = cache_max
+        self.cache = {}
+
+    def get_or_compile(self, template, table_group):
         """
-        :param OperatorDescriptor descriptor:
+
+        :param descriptors.BufrTemplate template: The BUFR template to compile
+        :param tables.TableGroup table_group: The Table Group used to instantiate the Template.
         :return:
         """
-        operator_code, operand_value = descriptor.operator_code, descriptor.operand_value
-
-        if operator_code == 201:  # nbits offset
-            self.nbits_offset = (operand_value - 128) if operand_value else 0
-
-        elif operator_code == 202:  # scale offset
-            self.scale_offset = (operand_value - 128) if operand_value else 0
-
-        elif operator_code == 203:  # new reference value
-            if operand_value == 0:
-                self.refval_new_ids = []
-                self.nbits_new_refval = operand_value
-            else:  # 255
-                self.nbits_new_refval = 0
-
-        elif operator_code == 204:  # associated field
-            if operand_value == 0:
-                self.nbits_associated_list.pop()
-            else:
-                self.nbits_associated_list.append(operand_value)
-
-        elif operator_code == 205:  # read string of YYY bytes
-            # TODO: Need take care of associated field?
-            # TODO: this is not affected by nbytes_new 208 YYY
-            self.add_process_worker_call('process_string', descriptor, operand_value)
-
-        elif operator_code == 206:  # skip local descriptor of YYY bits
-            self.nbits_skipped_local_descriptor = operand_value
-
-        elif operator_code == 207:  # increase nbits, scale, refval
-            if operand_value == 0:
-                self.nsr_modifier = NsrMod(
-                    nbits_increment=0, scale_increment=0, refval_factor=1
-                )
-            else:
-                self.nsr_modifier = NsrMod(
-                    nbits_increment=(10 * operand_value + 2) // 3,
-                    scale_increment=operand_value,
-                    refval_factor=10 ** operand_value,
-                )
-
-        elif operator_code == 208:  # change all string type descriptor length
-            self.nbytes_new = operand_value
-
-        # Data not present for following YYY descriptors except class 0-9 and 31
-        elif operator_code == 221:
-            self.data_not_present_count = operand_value
-
-        # Quality info, substituted, 1st order stats, difference stats, replaced
-        elif operator_code in (222, 223, 224, 225, 232):
-            if operand_value == 0:
-                self.bitmap_definition_state = BITMAP_INDICATOR
-                self.add_process_worker_call('mark_back_reference_boundary')
-                self.compile_process_0(descriptor)
-                if operator_code == 222:
-                    self.status_qa_info_follows = QA_INFO_WAITING
-            else:  # 255 for markers (this does not apply to 222)
-                self.compile_marker_operator_descriptor(descriptor)
-
-        elif operator_code == 235:
-            self.add_process_worker_call('cancel_all_back_references')
-
-        elif operator_code == 236:
-            self.compile_process_0(descriptor)
-
-        elif operator_code == 237:
-            if operand_value == 0:
-                self.add_process_worker_call('recall_bitmap')
-
-            else:  # 255 cancel re-used bitmap
-                if self.most_recent_bitmap_is_for_reuse:
-                    self.add_process_worker_call('cancel_bitmap')
-            self.compile_process_0(descriptor)
-
-        else:  # TODO: 241, 242, 243
-            pass
-
-    def compile_process_0(self, descriptor):
-        """
-        Many operator descriptors add a zero to the values.
-        """
-        # TODO: this is to be compatible to BUFRDC, necessary?
-        self.add_process_worker_call('process_value_for_descriptor', 0, descriptor)
-
-    def compile_marker_operator_descriptor(self, descriptor):
-        # TODO: do we really need associated field for marker operators
-        if self.nbits_associated_list:
-            self.compile_associated_field(descriptor)
-
-        self.add_process_worker_call(
-            'process_bitmapped_descriptor',
-            descriptor.id,
-            self.nbytes_new,
-            self.nbits_offset,
-            self.scale_offset,
-            self.nsr_modifier.nbits_increment,
-            self.nsr_modifier.scale_increment,
-            self.nsr_modifier.refval_factor)
-
-    def compile_skipped_local_descriptor(self, descriptor):
-        # TODO: possible associated field?
-        self.add_process_worker_call(
-            'process_codeflag',
-            SkippedLocalDescriptor(descriptor.id, self.nbits_skipped_local_descriptor),
-            self.nbits_skipped_local_descriptor
+        key_of_compiled_template = (
+            tuple(template.original_descriptor_ids),
+            table_group.key
         )
-        # reset it back to zero
-        self.nbits_skipped_local_descriptor = 0
+        log.debug('Getting compiled template of key: {}'.format(key_of_compiled_template))
+        compiled_template = self.cache.get(key_of_compiled_template, None)
 
-    def compile_bitmap_definition(self, member):
+        if compiled_template is None:
+            log.debug('Cached version not available. Compiling now ...')
+            compiled_template = self.template_compiler.process(template, table_group)
 
-        if self.bitmap_definition_state == BITMAP_INDICATOR:
-            # TODO: 236000 and 237000 are handled here. bad?
-            if member.id == 236000:  # bitmap define for reuse
-                self.most_recent_bitmap_is_for_reuse = True
-                self.bitmap_definition_state = BITMAP_WAITING_FOR_BIT
-                self.compile_init_bitmap_bit_count()
+            # TODO: Better cache invalidate algorithm
+            if len(self.cache) >= self.cache_max:
+                self.cache.popitem()
 
-            elif member.id == 237000:  # re-call most recent definition
-                self.bitmap_definition_state = BITMAP_NA
+            self.cache[key_of_compiled_template] = compiled_template
 
-            else:  # direct bitmap definition (non-reuse)
-                self.most_recent_bitmap_is_for_reuse = False
-                self.bitmap_definition_state = BITMAP_WAITING_FOR_BIT
-                self.compile_init_bitmap_bit_count()
-
-        elif self.bitmap_definition_state == BITMAP_WAITING_FOR_BIT:
-            if member.id == 31031:
-                self.bitmap_definition_state = BITMAP_BIT_COUNTING
-                self.compile_increase_bitmap_bit_count()
-
-        elif self.bitmap_definition_state == BITMAP_BIT_COUNTING:
-            if member.id == 31031:
-                self.compile_increase_bitmap_bit_count()
-            else:
-                # TODO: for compressed data, ensure all bitmap is equal
-                self.add_process_worker_call(
-                    'define_bitmap',
-                    ast.Name(id='n_031031', ctx=ast.Load()),
-                    self.most_recent_bitmap_is_for_reuse)
-                self.bitmap_definition_state = BITMAP_NA
-
-    def compile_members(self, members):
-        for member in members:
-            member_type = type(member)
-
-            # TODO: NOT using if-elif for following checks because they may co-exist???
-            #      It is highly unlikely if not impossible
-
-            # 221 YYY data not present for following YYY descriptors except class 0-9 and 31
-            if self.data_not_present_count:
-                self.data_not_present_count -= 1
-                if member_type is ElementDescriptor:
-                    X = member.X
-                    if not (1 <= X <= 9 or X == 31):  # skipping
-                        continue
-                        # TODO: maybe the descriptor should still be kept and set its value to None?
-                        #       So it helps to keep the structure intact??
-
-            # Currently defining new reference values
-            if self.nbits_new_refval:
-                self.compile_define_new_refval(member)
-                continue
-
-            # 206 YYY signify data width for local descriptor
-            if self.nbits_skipped_local_descriptor:
-                self.compile_skipped_local_descriptor(member)
-                continue
-
-            # Currently defining new bitmap
-            if self.bitmap_definition_state != BITMAP_NA:
-                self.compile_bitmap_definition(member)
-
-            # Now process normally
-            if member_type is ElementDescriptor:
-                self.compile_element_descriptor(member)
-
-            elif member_type is FixedReplicationDescriptor:
-                self.compile_fixed_replication_descriptor(member)
-
-            elif member_type is DelayedReplicationDescriptor:
-                self.compile_delayed_replication_descriptor(member)
-
-            elif member_type is OperatorDescriptor:
-                self.compile_operator_descriptor(member)
-
-            elif member_type is SequenceDescriptor:
-                self.compile_sequence_descriptor(member)
-
-            else:
-                raise BpclError('Cannot compile descriptor {} of type: {}'.format(
-                    member.id, member_type))
+        return compiled_template
 
 
-def make_funcdef(stmt_list):
+#############################################################################
+# Functions to Load a CompiledTemplate from a JSON String.
+def loads_compiled_template(s):
     """
-    Make a function definition from the AST tree of compiled template. This
-    function can be saved as a python module and imported to use. The function
-    is responsible for set the correct process_xxx methods based on the
-    arguments (is_decode, is_compressed) it receives.
+    Load a compiled template object from its JSON string representation.
+
+    :param s: A JSON string represents the compiled template.
+    :return: The compiled template
     """
-    func_names = {'n_subsets'}
-    # Find all methods the worker function calls
-    for tree in stmt_list:
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                func_name = node.func.id
-                if func_name not in ('range', 'worker_func'):
-                    func_names.add(node.func.id)
-
-    body = [
-        ast.ImportFrom(
-            module='six.moves', names=[ast.alias(name='range', asname=None)], level=0
-        ),
-        # The prefix of the methods based on decode/encode
-        ast.Assign(
-            targets=[ast.Name(id='prefix', ctx=ast.Store())],
-            value=ast.IfExp(test=ast.Name(id='is_decode', ctx=ast.Load()),
-                            body=ast.Str(s='decode_'), orelse=ast.Str(s='encode_'))
-        ),
-        # The suffix of the methods based on compressed/uncompressed
-        ast.Assign(
-            targets=[ast.Name(id='suffix', ctx=ast.Store())],
-            value=ast.IfExp(test=ast.Name(id='is_compressed', ctx=ast.Load()),
-                            body=ast.Str(s='_compressed'), orelse=ast.Str(s='_uncompressed'))
-        ),
-    ]
-
-    # assign all needed vm methods with the proper prefix and suffix
-    for func_name in func_names:
-        # All process_xxx methods need prefix and suffix
-        if func_name.startswith('process_'):
-            body.append(
-                ast.Assign(
-                    targets=[ast.Name(id=func_name, ctx=ast.Store())],
-                    value=ast.Call(
-                        func=ast.Name(id='getattr', ctx=ast.Load()),
-                        args=[
-                            ast.Name(id='vm', ctx=ast.Load()),
-                            ast.Call(
-                                func=ast.Attribute(value=ast.Str(s='{}{}{}'),
-                                                   attr='format', ctx=ast.Load()),
-                                args=[ast.Name(id='prefix', ctx=ast.Load()),
-                                      ast.Str(s=func_name[8:]),
-                                      ast.Name(id='suffix', ctx=ast.Load())],
-                                keywords=[], starargs=None, kwargs=None)
-
-                        ],
-                        keywords=[], starargs=None, kwargs=None
-                    )
-                )
-            )
-        else:  # everything else just has a simple assignment
-            body.append(
-                ast.Assign(
-                    targets=[ast.Name(id=func_name, ctx=ast.Store())],
-                    value=ast.Attribute(value=ast.Name(id='vm', ctx=ast.Load()),
-                                        attr=func_name, ctx=ast.Load())
-                )
-            )
-
-    body.extend(stmt_list)
-
-    if PY3:
-        arguments = ast.arguments(
-            args=[ast.arg(arg='vm', annotation=None),
-                  ast.arg(arg='is_decode', annotation=None),
-                  ast.arg(arg='is_compressed', annotation=None)],
-            vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[]
+    d = json.loads(s)
+    assert d['type'] == 'CompiledTemplate', 'The type must be CompiledTemplate (was {})'.format(d['type'])
+    # Table group key and its elements must be tuple to be hashable, which is a
+    # requirement for being a key to dict.
+    table_group = get_table_group_by_key(
+        TableGroupKey(*[(tuple(x) if isinstance(x, list) else x) for x in d['table_group_key']])
+    )
+    template = table_group.template_from_ids(*d['template_ids'])
+    compiled_template = CompiledTemplate(table_group.key, template)
+    for statement_dict in d['statements']:
+        compiled_template.add_statement(
+            STATEMENT_LOAD_FUNCS[statement_dict['type']](table_group, statement_dict)
         )
-        node = ast.FunctionDef(
-            name='process_template',
-            args=arguments,
-            body=body,
-            decorator_list=[],
-            returns=None
-        )
+    return compiled_template
+
+
+def load_loop_from_dict(table_group, d):
+    assert d['type'] == 'Loop', 'The type must be Loop (was {})'.format(d['type'])
+    if isinstance(d['repeat'], dict):
+        repeat = STATEMENT_LOAD_FUNCS[d['repeat']['type']](table_group, d['repeat'])
     else:
-        arguments = ast.arguments(
-            args=[ast.Name(id='vm', ctx=ast.Param()),
-                  ast.Name(id='is_decode', ctx=ast.Param()),
-                  ast.Name(id='is_compressed', ctx=ast.Param())],
-            vararg=None, kwarg=None, defaults=[]
+        repeat = d['repeat']
+
+    loop = Loop(repeat)
+    for statement_dict in d['statements']:
+        loop.add_statement(
+            STATEMENT_LOAD_FUNCS[statement_dict['type']](table_group, statement_dict)
         )
-
-        node = ast.FunctionDef(
-            name='process_template',
-            args=arguments,
-            body=body,
-            decorator_list=[]
-        )
-
-    return ast.Module(body=[node])
+    return loop
 
 
-template_compiler = TemplateCompiler()
+def load_coder_method_call_from_dict(table_group, d):
+    assert d['type'] == 'CoderMethodCall', 'The type must be CoderMethodCall (was {})'.format(d['type'])
+    return load_method_call_from_dict(CoderMethodCall, table_group, d)
+
+
+def load_state_method_call_from_dict(table_group, d):
+    assert d['type'] == 'StateMethodCall', 'The type must be StateMethodCall (was {})'.format(d['type'])
+    return load_method_call_from_dict(StateMethodCall, table_group, d)
+
+
+def load_method_call_from_dict(method_type, table_group, d):
+    if d.get('with_descriptor', False):
+        descriptor = table_group.lookup(d['args'][0])
+        args = tuple([descriptor] + d['args'][1:])
+    else:
+        args = tuple(d['args'])
+
+    return method_type(method_name=d['method_name'],
+                       args=args,
+                       state_properties=d.get('state_properties'))
+
+
+STATEMENT_LOAD_FUNCS = {
+    'Loop': load_loop_from_dict,
+    'CoderMethodCall': load_coder_method_call_from_dict,
+    'StateMethodCall': load_state_method_call_from_dict,
+    'State031031Increment': lambda *args: State031031Increment(),
+    'State031031Reset': lambda *args: State031031Reset(),
+}

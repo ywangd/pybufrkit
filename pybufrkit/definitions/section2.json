@@ -1,0 +1,23 @@
+{
+  "index": 2,
+  "description": "Optional section",
+  "default": true,
+  "optional": true,
+  "parameters": [
+    {
+      "name": "section_length",
+      "nbits": 24,
+      "type": "uint"
+    },
+    {
+      "name": "reserved_bits",
+      "nbits": 8,
+      "type": "bin"
+    },
+    {
+      "name": "local_bits",
+      "nbits": 0,
+      "type": "bin"
+    }
+  ]
+}

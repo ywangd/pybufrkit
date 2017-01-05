@@ -6,6 +6,7 @@ import unittest
 from pybufrkit.encoder import Encoder
 from pybufrkit.decoder import Decoder
 import six
+# noinspection PyUnresolvedReferences
 from six.moves import range
 
 BASE_DIR = os.path.dirname(__file__)
@@ -14,8 +15,9 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 class EncoderTests(unittest.TestCase):
     def setUp(self):
-        self.encoder = Encoder()
+        self.encoder = Encoder(ignore_declared_length=True)
         self.decoder = Decoder()
+
         self.filename_stubs = [
             'IUSK73_AMMC_182300',
             'rado_250',  # uncompressed with 222000, 224000, 236000
@@ -38,14 +40,15 @@ class EncoderTests(unittest.TestCase):
     def do_test(self, filename_stub):
         with open(os.path.join(DATA_DIR, filename_stub + '.json')) as ins:
             s = ins.read()
-        bins = self.encoder.encode(s)
-        self.decoder.decode(bins.bytes)
+        bufr_message_encoded = self.encoder.process(s)
+        bufr_message_decoded = self.decoder.process(bufr_message_encoded.serialized_bytes)
 
-        assert len(self.encoder.decoded_values_all_subsets) == len(self.decoder.decoded_values_all_subsets)
+        assert len(bufr_message_encoded.template_data.value.decoded_values_all_subsets) == \
+               len(bufr_message_decoded.template_data.value.decoded_values_all_subsets)
 
-        for idx_subset in range(len(self.encoder.decoded_values_all_subsets)):
-            encoder_values = self.encoder.decoded_values_all_subsets[idx_subset]
-            decoder_values = self.decoder.decoded_values_all_subsets[idx_subset]
+        for idx_subset in range(len(bufr_message_encoded.template_data.value.decoded_values_all_subsets)):
+            encoder_values = bufr_message_encoded.template_data.value.decoded_values_all_subsets[idx_subset]
+            decoder_values = bufr_message_decoded.template_data.value.decoded_values_all_subsets[idx_subset]
             assert len(encoder_values) == len(decoder_values)
             for idx_value in range(len(encoder_values)):
                 if isinstance(encoder_values[idx_value], six.text_type):

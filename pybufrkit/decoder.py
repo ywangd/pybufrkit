@@ -1,239 +1,255 @@
 from __future__ import absolute_import
-from .utils import BpclError, bins_from_string, peek_edition, format_decoded_data
-from .vm import VM, minmax, NUMERIC_MISSING_VALUES, NBITS_FOR_NBITS_DIFF
-from .bufr import Bufr
+from __future__ import print_function
+
+import functools
+import logging
+
+from pybufrkit.constants import *
+from pybufrkit.bitops import get_bit_reader
+from pybufrkit.tables import get_table_group
+from pybufrkit.bufr import BufrMessage
+from pybufrkit.templatedata import TemplateData
+from pybufrkit.coder import Coder, CoderState
+from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
+
+# noinspection PyUnresolvedReferences
 from six.moves import range
 
 __all__ = ['Decoder']
 
+log = logging.getLogger(__file__)
+
 
 # noinspection PyUnusedLocal,PyAttributeOutsideInit
-class Decoder(VM):
+class Decoder(Coder):
     def __init__(self,
                  definitions_dir=None,
-                 definition_filename=None,
                  tables_root_dir=None,
-                 cache_compiled_template=True,
-                 compiled_template_dir=None,
-                 save_compiled_template=False):
+                 compiled_template_cache_max=0):
 
-        super(Decoder, self).__init__(VM.MODE_DECODER,
-                                      definitions_dir,
-                                      definition_filename if definition_filename else 'boot-decode.bpcl',
-                                      tables_root_dir,
-                                      cache_compiled_template,
-                                      compiled_template_dir,
-                                      save_compiled_template)
+        super(Decoder, self).__init__(definitions_dir, tables_root_dir)
 
-        # These functions are used both from the BPCL files and this file
-        self.read_uint = self.gns['read_uint']
-        self.read_int = self.gns['read_int']
-        self.read_string = self.gns['read_string']
+        # Only enable template compilation if non-zero cache is requested
+        if compiled_template_cache_max > 0:
+            self.compiled_template_manager = CompiledTemplateManager(compiled_template_cache_max)
+            log.debug('Template compilation enabled with cache size of {}'.format(compiled_template_cache_max))
+        else:
+            self.compiled_template_manager = None
 
-    def decode(self, s, file_path='<string>'):
+    def process(self, s, file_path='<string>',
+                start_signature=MESSAGE_START_SIGNATURE,
+                info_only=False,
+                ignore_value_expectation=False,
+                wire_template_data=True):
         """
-        Entry point for the whole decoding process. It does its job by executing
-        the code object from the definition files. The code object in turns
-        calls back to other methods of this class.
+        Decoding the given message string.
 
-        :param bytes s: The bytes string of the BUFR message
-        :param file_path: The file path that the input bytes string is read from
-        """
-        self.decode_preflight(s, file_path)
-        # TODO: error handling for code object or let it bubble up to caller?
-        exec(self.boot_code, self.gns)
+        :param s: Message string that contains the BUFR Message
+        :param file_path: The file where this string is read from.
+        :param start_signature: Locate the starting position of the message
+            string with the given signature.
+        :param info_only: Only show information up to template data (exclusive)
+        :param ignore_value_expectation: Do not validate the expected value
+        :param wire_template_data: Whether to wire the template data to construct
+            a fully hierarchical structure from the flat lists. Only takes effect
+            when it is NOT info_only.
 
-        # Now build and return the BUFR object
-        return Bufr(
-            input_file_path=self.gns.get('_input_file_path'),
-            table_group_info_string=str(self.get('table_group')),
-            section0=self.gns.get('section0', None),
-            section1=self.gns.get('section1', None),
-            section2=self.gns.get('section2', None),
-            section3=self.gns.get('section3', None),
-            section4=self.gns.get('section4', None),
-            section5=self.gns.get('section5', None),
-            n_subsets=self.get('n_subsets'),
-            is_compressed=self.get('is_compressed'),
-            template=self.get('template'),
-            unexpanded_descriptors=self.get('unexpanded_descriptors'),
-            decoded_descriptors_all_subsets=self.get('decoded_descriptors_all_subsets'),
-            decoded_values_all_subsets=self.get('decoded_values_all_subsets'),
-            bitmap_links_all_subsets=self.get('bitmap_links_all_subsets'),
-        )
+        :return: A BufrMessage object that contains the decoded information.
+        """
+        idx = s.find(start_signature) if start_signature is not None else 0
+        if idx == -1:
+            raise RuntimeError('Cannot find start signature: {}'.format(start_signature))
+        s = s[idx:]
 
-    def dumps(self):
-        """
-        Dumps all working variables of the object. This is useful to debug the
-        process in case of error.
-        """
-        ret = []
-        for k, v in self.gns.items():
-            if k == '__builtins__' or callable(v):
+        bit_reader = get_bit_reader(s)
+        bufr_message = BufrMessage()
+
+        configuration_transformers = (self.section_configurer.info_configuration,) if info_only else ()
+        if ignore_value_expectation:
+            configuration_transformers += (self.section_configurer.ignore_value_expectation,)
+
+        nbits_decoded = 0
+        section_index = 0  # Always start decoding from section 0
+        while True:
+            section = self.section_configurer.configure_section(bufr_message, section_index,
+                                                                configuration_transformers)
+            section_index += 1
+            if section is None:  # when optional section is not present
                 continue
-            ret.append('{} = {!r}'.format(k, v))
+            nbits_decoded += self.process_section(bufr_message, bit_reader, section)
+            if section.end_of_message:
+                break
 
-        try:
-            ret.extend(format_decoded_data(self.n_subsets,
-                                           self.decoded_descriptors_all_subsets,
-                                           self.decoded_values_all_subsets,
-                                           self.bitmap_links_all_subsets))
-        except AttributeError:
-            pass
+        # The exact bytes that have been decoded
+        bufr_message.serialized_bytes = s[:nbits_decoded // NBITS_PER_BYTE]
 
-        return '\n'.join(ret)
+        if not info_only and wire_template_data:
+            bufr_message.wire()
 
-    # noinspection PyAttributeOutsideInit
-    def decode_preflight(self, s, file_path):
-        VM._process_preflight(self)
-        # Set up new variables
-        bins = bins_from_string(s)
-        self.gns.update(
-            (
-                ('_input_file_path', file_path),
-                ('_bins', bins),
-                ('_edition', peek_edition(bins)),
-            )
+        return bufr_message
+
+    def process_section(self, bufr_message, bit_reader, section):
+        """
+        Decode the given configured Section.
+
+        :param bufr_message: The BUFR message object.
+        :param section: The BUFR section object.
+        :param bit_reader:
+        :return: Number of bits decoded for this section.
+        """
+        section.set_metadata(BITPOS_START, bit_reader.get_pos())
+
+        for parameter in section:
+            if parameter.type == PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS:
+                parameter.value = self.process_unexpanded_descriptors(bit_reader, section)
+            elif parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
+                parameter.value = self.process_template_data(bufr_message, bit_reader)
+            elif parameter.nbits == 0:
+                # Zero number of bits means to read all bits till the end of the section
+                parameter.value = bit_reader.read(
+                    parameter.type,
+                    section.section_length.value * NBITS_PER_BYTE
+                    - (bit_reader.get_pos() - section.get_metadata(BITPOS_START))
+                )
+            else:
+                parameter.value = bit_reader.read(parameter.type, parameter.nbits)
+
+            log.debug('{} = {!r}'.format(parameter.name, parameter.value))
+
+            # Make available as a property of the overall message object
+            if parameter.as_property:
+                setattr(bufr_message, parameter.name, parameter)
+
+            if parameter.expected is not None:
+                assert parameter.value == parameter.expected, 'Value ({!r}) not as expected ({!r})'.format(
+                    parameter.value, parameter.expected
+                )
+
+        # TODO: option to ignore the declared length?
+        # TODO: this depends on a specific parameter name, need change to parameter type?
+        if 'section_length' in section:
+            nbits_read = bit_reader.get_pos() - section.get_metadata(BITPOS_START)
+            nbits_unread = section.section_length.value * NBITS_PER_BYTE - nbits_read
+            if nbits_unread > 0:
+                log.debug('Skipping {} bits to end of the section'.format(nbits_unread))
+                bit_reader.read_bin(nbits_unread)
+            elif nbits_unread < 0:
+                raise RuntimeError('Read exceeds declared section length: {}'.format(section.section_length.value))
+
+        return bit_reader.get_pos() - section.get_metadata(BITPOS_START)
+
+    def process_unexpanded_descriptors(self, bit_reader, section):
+        """
+        Decode for the list of unexpanded descriptors.
+
+        :param section: The BUFR section object.
+        :param bit_reader:
+        :return: The unexpanded descriptors as a list.
+        """
+        unexpanded_descriptors = []
+        nbytes_read = (bit_reader.get_pos() - section.get_metadata(BITPOS_START)) // NBITS_PER_BYTE
+        for _ in range((section.section_length.value - nbytes_read) // 2):
+            f = bit_reader.read_uint(2)
+            x = bit_reader.read_uint(6)
+            y = bit_reader.read_uint(8)
+            unexpanded_descriptors.append(f * 100000 + x * 1000 + y)
+
+        return unexpanded_descriptors
+
+    def process_template_data(self, bufr_message, bit_reader):
+        """
+        Decode data described by the template.
+
+        :param bufr_message: The BUFR message object.
+        :param bit_reader:
+        :return: TemplateData decoded from the bit stream.
+        """
+        # TODO: Parametrise the "normalize" argument
+        table_group = get_table_group(
+            tables_root_dir=self.tables_root_dir,
+            master_table_number=bufr_message.master_table_number.value,
+            originating_centre=bufr_message.originating_centre.value,
+            originating_subcentre=bufr_message.originating_subcentre.value,
+            master_table_version=bufr_message.master_table_version.value,
+            local_table_version=bufr_message.local_table_version.value,
+            normalize=1
         )
+        bufr_message.table_group_key = table_group.key
 
-    # noinspection PyUnresolvedReferences
-    def decode_s4_data(self, n_subsets, is_compressed):
-        self.decoded_values_all_subsets = [[] for _ in range(n_subsets)]
-        VM._process_s4_data_preflight(self, n_subsets, is_compressed)
+        bufr_template = table_group.template_from_ids(*bufr_message.unexpanded_descriptors.value)
+        state = CoderState(bufr_message.is_compressed.value, bufr_message.n_subsets.value)
 
-        func = VM._get_s4_process_func(self)
-        func(self, is_decode=True, is_compressed=self.is_compressed)
+        if self.compiled_template_manager:
+            template_to_process = self.compiled_template_manager.get_or_compile(bufr_template, table_group)
+            template_processing_func = functools.partial(process_compiled_template, self)
+        else:
+            template_to_process = bufr_template
+            template_processing_func = self.process_template
 
-    def read_uint_or_none(self, nbits):
-        value = self.read_uint(nbits)
-        if nbits > 1 and value == NUMERIC_MISSING_VALUES[nbits]:
-            value = None
-        return value
+        # For uncompressed data, the processing has to be repeated for number of times
+        # equals to number of subsets. For compressed data, only a single processing
+        # is needed as all subsets are taken care each time a value is processed.
+        if bufr_message.is_compressed.value:
+            template_processing_func(state, bit_reader, template_to_process)
+        else:
+            for idx_subset in range(bufr_message.n_subsets.value):
+                state.switch_subset_context(idx_subset)
+                template_processing_func(state, bit_reader, template_to_process)
 
-    def get_delayed_replication_factor_value(self):
-        return VM._get_delayed_replication_factor_value(self, -1)
+        return TemplateData(bufr_template,
+                            bufr_message.is_compressed.value,
+                            state.decoded_descriptors_all_subsets,
+                            state.decoded_values_all_subsets,
+                            state.bitmap_links_all_subsets)
 
-    def define_bitmap(self, n_031031, reuse):
+    def get_value_for_delayed_replication_factor(self, state):
+        return state.get_value_for_delayed_replication_factor(-1)
+
+    def define_bitmap(self, state, reuse):
         """
         For compressed data, bitmap and back referenced descriptors must be
         identical Otherwise it makes no sense in compressing different bitmapped
         descriptors into one slot.
 
-        :param n_031031: Number of 031031 descriptors used to define this bitmap
+        :param state:
         :param reuse: Is this bitmap for reuse?
+        :return: The bitmap as a list of 0 and 1.
         """
         # First get all the bit values for the bitmap
-        if self.is_compressed:
-            bitmap = self.decoded_values_all_subsets[0][-n_031031:]
+        if state.is_compressed:
+            bitmap = state.decoded_values_all_subsets[0][-state.n_031031:]
         else:
-            bitmap = self.decoded_values[-n_031031:]
+            bitmap = state.decoded_values[-state.n_031031:]
         if reuse:
-            self.bitmap = bitmap
+            state.bitmap = bitmap
 
-        VM._build_bitmapped_descriptors(self, bitmap)
+        state.build_bitmapped_descriptors(bitmap)
         return bitmap
 
-    def _decode_bitmapped_descriptor(self, *args):
-        """
-        This is a generic DECODING method for both uncompressed and compressed
-        data by wrapping the superclass's even more generic method.
-        """
-        VM._process_bitmapped_descriptor(self, *args)
+    def process_numeric(self, state, bit_reader, descriptor, nbits, scale_powered, refval):
+        (self.process_numeric_compressed if state.is_compressed else
+         self.process_numeric_uncompressed)(state, bit_reader, descriptor, nbits, scale_powered, refval)
 
-    def decode_value_for_descriptor_uncompressed(self, value, descriptor):
-        self.decoded_descriptors.append(descriptor)
-        self.decoded_values.append(value)
-
-    def decode_string_uncompressed(self, descriptor, nbytes):
-        """
-        Decode a string value of the given number of bytes
-
-        :param descriptor:
-        :param nbytes: Number of bytes to read for the string.
-        """
-        self.decoded_descriptors.append(descriptor)
-        self.decoded_values.append(self.read_string(nbytes))
-
-    def decode_numeric_uncompressed(self, descriptor,
-                                    nbits, scale_powered, refval):
-        self.decoded_descriptors.append(descriptor)
-        value = self.read_uint_or_none(nbits)
+    def process_numeric_uncompressed(self, state, bit_reader, descriptor, nbits, scale_powered, refval):
+        state.decoded_descriptors.append(descriptor)
+        value = bit_reader.read_uint_or_none(nbits)
         if value is not None:
             if refval:
                 value += refval
             if scale_powered != 1:
                 value /= scale_powered
-        self.decoded_values.append(value)
+        state.decoded_values.append(value)
 
-    def decode_numeric_with_new_refval_uncompressed(self, descriptor,
-                                                    nbits, scale_powered, refval_factor):
-        self.decode_numeric_uncompressed(descriptor, nbits, scale_powered,
-                                         self.refval_new[descriptor.id] * refval_factor)
-
-    def decode_codeflag_uncompressed(self, descriptor, nbits):
-        """
-        Decode a descriptor of code or flag value. A code or flag value does not
-        need to scale and refval.
-        """
-        self.decoded_descriptors.append(descriptor)
-        self.decoded_values.append(self.read_uint_or_none(nbits))
-
-    def decode_new_refval_uncompressed(self, descriptor, nbits):
-        self.decoded_descriptors.append(descriptor)
-        # NOTE read_int NOT read_uint
-        self.refval_new[descriptor.id] = value = self.read_int(nbits)
-        # TODO: new descriptor type for new refval
-        self.decoded_values.append(value)
-
-    def decode_bitmapped_descriptor_uncompressed(self, *args):
-        self._decode_bitmapped_descriptor(self.decode_string_uncompressed,
-                                          self.decode_codeflag_uncompressed,
-                                          self.decode_numeric_uncompressed,
-                                          self.decode_numeric_with_new_refval_uncompressed,
-                                          *args)
-
-    def decode_value_for_descriptor_compressed(self, value, descriptor):
-        self.decoded_descriptors.append(descriptor)
-        for decoded_values in self.decoded_values_all_subsets:
-            decoded_values.append(value)
-
-    def decode_string_compressed(self, descriptor, nbytes_min_value):
-        """
-        Decode a single compressed string value.
-
-        :param descriptor:
-        :param nbytes_min_value:
-        """
-        self.decoded_descriptors.append(descriptor)
-        min_value = self.read_string(nbytes_min_value)
-        nbits_diff = self.read_uint(NBITS_FOR_NBITS_DIFF)
-
-        if nbits_diff:  # non-zero nbits_diff
-            assert min_value == b'\0' * nbytes_min_value, (
-                '{}: Different string must be compressed'
-                ' with empty min value'.format(descriptor))
-
-        # special cases: all missing or all equals
-        if min_value is None or nbits_diff == 0:
-            assert nbits_diff == 0, ('{}: nbits_diff must be zero for compressed '
-                                     'values that are all missing or equal'.format(descriptor))
-            for decoded_values in self.decoded_values_all_subsets:
-                decoded_values.append(min_value)
-        else:
-            for decoded_values in self.decoded_values_all_subsets:
-                decoded_values.append(self.read_string(nbits_diff))
-
-    def decode_numeric_compressed(self, descriptor,
-                                  nbits_min_value, scale_powered, refval):
-        self.decoded_descriptors.append(descriptor)
-        min_value = self.read_uint_or_none(nbits_min_value)
-        nbits_diff = self.read_uint(NBITS_FOR_NBITS_DIFF)
+    def process_numeric_compressed(self, state, bit_reader, descriptor, nbits_min_value, scale_powered, refval):
+        state.decoded_descriptors.append(descriptor)
+        min_value = bit_reader.read_uint_or_none(nbits_min_value)
+        nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
 
         # special cases: all missing or all equals
         if min_value is None:
             assert nbits_diff == 0, ('{}: nbits_diff must be zero for compressed '
                                      'values that are all missing or equal'.format(descriptor))
-            for decoded_values in self.decoded_values_all_subsets:
+            for decoded_values in state.decoded_values_all_subsets:
                 decoded_values.append(None)
 
         elif nbits_diff == 0:
@@ -242,11 +258,11 @@ class Decoder(VM):
                 value += refval
             if scale_powered != 1:
                 value /= scale_powered
-            for decoded_values in self.decoded_values_all_subsets:
+            for decoded_values in state.decoded_values_all_subsets:
                 decoded_values.append(value)
         else:
-            for decoded_values in self.decoded_values_all_subsets:
-                diff = self.read_uint_or_none(nbits_diff)
+            for decoded_values in state.decoded_values_all_subsets:
+                diff = bit_reader.read_uint_or_none(nbits_diff)
                 if diff is None:
                     value = None
                 else:
@@ -257,25 +273,56 @@ class Decoder(VM):
                         value /= scale_powered
                 decoded_values.append(value)
 
-    def decode_numeric_with_new_refval_compressed(self, descriptor,
-                                                  nbits_min_value, scale_powered, refval_factor):
-        self.decode_numeric_compressed(descriptor, nbits_min_value, scale_powered,
-                                       self.refval_new[descriptor.id] * refval_factor)
+    def process_string(self, state, bit_reader, descriptor, nbytes):
+        (self.process_string_compressed if state.is_compressed else
+         self.process_string_uncompressed)(state, bit_reader, descriptor, nbytes)
 
-    def decode_codeflag_compressed(self, descriptor, nbits_min_value):
-        self.decoded_descriptors.append(descriptor)
-        min_value = self.read_uint_or_none(nbits_min_value)
-        nbits_diff = self.read_uint(NBITS_FOR_NBITS_DIFF)
+    def process_string_uncompressed(self, state, bit_reader, descriptor, nbytes):
+        state.decoded_descriptors.append(descriptor)
+        state.decoded_values.append(bit_reader.read_bytes(nbytes))
+
+    def process_string_compressed(self, state, bit_reader, descriptor, nbytes_min_value):
+        state.decoded_descriptors.append(descriptor)
+        min_value = bit_reader.read_bytes(nbytes_min_value)
+        nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
+
+        if nbits_diff:  # non-zero nbits_diff
+            assert min_value == b'\0' * nbytes_min_value, (
+                '{}: Different string must be compressed'
+                ' with empty min value'.format(descriptor))
 
         # special cases: all missing or all equals
         if min_value is None or nbits_diff == 0:
             assert nbits_diff == 0, ('{}: nbits_diff must be zero for compressed '
                                      'values that are all missing or equal'.format(descriptor))
-            for decoded_values in self.decoded_values_all_subsets:
+            for decoded_values in state.decoded_values_all_subsets:
                 decoded_values.append(min_value)
         else:
-            for decoded_values in self.decoded_values_all_subsets:
-                diff = self.read_uint_or_none(nbits_diff)
+            for decoded_values in state.decoded_values_all_subsets:
+                decoded_values.append(bit_reader.read_bytes(nbits_diff))
+
+    def process_codeflag(self, state, bit_reader, descriptor, nbits):
+        (self.process_codeflag_compressed if state.is_compressed else
+         self.process_codeflag_uncompressed)(state, bit_reader, descriptor, nbits)
+
+    def process_codeflag_uncompressed(self, state, bit_reader, descriptor, nbits):
+        state.decoded_descriptors.append(descriptor)
+        state.decoded_values.append(bit_reader.read_uint_or_none(nbits))
+
+    def process_codeflag_compressed(self, state, bit_reader, descriptor, nbits_min_value):
+        state.decoded_descriptors.append(descriptor)
+        min_value = bit_reader.read_uint_or_none(nbits_min_value)
+        nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
+
+        # special cases: all missing or all equals
+        if min_value is None or nbits_diff == 0:
+            assert nbits_diff == 0, ('{}: nbits_diff must be zero for compressed '
+                                     'values that are all missing or equal'.format(descriptor))
+            for decoded_values in state.decoded_values_all_subsets:
+                decoded_values.append(min_value)
+        else:
+            for decoded_values in state.decoded_values_all_subsets:
+                diff = bit_reader.read_uint_or_none(nbits_diff)
                 if diff is None:
                     value = None
                 else:
@@ -286,23 +333,47 @@ class Decoder(VM):
                         value = None
                 decoded_values.append(value)
 
-    def decode_new_refval_compressed(self, descriptor, nbits_min_value):
-        self.decoded_descriptors.append(descriptor)
-        min_value = self.read_int(nbits_min_value)
-        nbits_diff = self.read_uint(NBITS_FOR_NBITS_DIFF)
+    def process_new_refval(self, state, bit_reader, descriptor, nbits):
+        (self.process_new_refval_compressed if state.is_compressed else
+         self.process_new_refval_uncompressed)(state, bit_reader, descriptor, nbits)
+
+    def process_new_refval_uncompressed(self, state, bit_reader, descriptor, nbits):
+        state.decoded_descriptors.append(descriptor)
+        # NOTE read_int NOT read_uint
+        state.new_refvals[descriptor.id] = value = bit_reader.read_int(nbits)
+        # TODO: new descriptor type for new refval
+        state.decoded_values.append(value)
+
+    def process_new_refval_compressed(self, state, bit_reader, descriptor, nbits_min_value):
+        state.decoded_descriptors.append(descriptor)
+        min_value = bit_reader.read_int(nbits_min_value)
+        nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
 
         assert nbits_diff == 0, ('{}: New reference values must be identical '
                                  'for all subsets for compressed data'.format(descriptor))
 
-        for decoded_values in self.decoded_values_all_subsets:
+        for decoded_values in state.decoded_values_all_subsets:
             decoded_values.append(min_value)
 
-        self.refval_new[descriptor.id] = min_value
+        state.new_refvals[descriptor.id] = min_value
         # TODO: new descriptor type for new refval
 
-    def decode_bitmapped_descriptor_compressed(self, *args):
-        self._decode_bitmapped_descriptor(self.decode_string_compressed,
-                                          self.decode_codeflag_compressed,
-                                          self.decode_numeric_compressed,
-                                          self.decode_numeric_with_new_refval_compressed,
-                                          *args)
+    # TODO: this method can be removed if we don't use compiled template.
+    def process_numeric_of_new_refval(self, state, bit_reader,
+                                      descriptor, nbits, scale_powered,
+                                      refval_factor):
+        self.process_numeric(state, bit_reader, descriptor, nbits, scale_powered,
+                             state.new_refvals[descriptor.id] * refval_factor)
+
+    def process_constant(self, state, bit_reader, descriptor, value):
+        (self.process_constant_compressed if state.is_compressed else
+         self.process_constant_uncompressed)(state, bit_reader, descriptor, value)
+
+    def process_constant_uncompressed(self, state, bit_reader, descriptor, value):
+        state.decoded_descriptors.append(descriptor)
+        state.decoded_values.append(value)
+
+    def process_constant_compressed(self, state, bit_reader, descriptor, value):
+        state.decoded_descriptors.append(descriptor)
+        for decoded_values in state.decoded_values_all_subsets:
+            decoded_values.append(value)

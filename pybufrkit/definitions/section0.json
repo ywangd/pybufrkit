@@ -1,0 +1,27 @@
+{
+  "index": 0,
+  "description": "Indicator section",
+  "default": true,
+  "optional": false,
+  "parameters": [
+    {
+      "name": "start_signature",
+      "nbits": 32,
+      "type": "bytes",
+      "expected": "BUFR",
+      "as_property": false
+    },
+    {
+      "name": "length",
+      "nbits": 24,
+      "type": "uint",
+      "as_property": true
+    },
+    {
+      "name": "edition",
+      "nbits": 8,
+      "type": "uint",
+      "as_property": true
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "index": 5,
+  "description": "End section",
+  "default": true,
+  "optional": false,
+  "end_of_message": true,
+  "parameters": [
+    {
+      "name": "stop_signature",
+      "nbits": 32,
+      "type": "bytes",
+      "expected": "7777"
+    }
+  ]
+}

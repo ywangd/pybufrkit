@@ -4,6 +4,6 @@ include LICENSE
 
 recursive-include docs *
 
-recursive-include pybufrkit/definitions *.bpcl
+recursive-include pybufrkit/definitions *.json
 recursive-include pybufrkit/tables *
 recursive-include tests *

@@ -31,30 +31,23 @@ import functools
 from numbers import Integral
 from collections import namedtuple
 
-from .descriptors import (ElementDescriptor,
-                          FixedReplicationDescriptor, DelayedReplicationDescriptor,
-                          OperatorDescriptor, SequenceDescriptor, BufrTemplate,
-                          UndefinedElementDescriptor, UndefinedSequenceDescriptor)
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
-__all__ = ['get_table_group']
+from pybufrkit.constants import DEFAULT_TABLES_DIR
+from pybufrkit.descriptors import (ElementDescriptor,
+                                   FixedReplicationDescriptor, DelayedReplicationDescriptor,
+                                   OperatorDescriptor, SequenceDescriptor, BufrTemplate,
+                                   UndefinedElementDescriptor, UndefinedSequenceDescriptor)
 
-if getattr(sys, 'frozen', False):  # for pyinstaller
-    BASE_DIR = sys._MEIPASS
-else:
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+__all__ = ['TableGroupKey', 'get_table_group', 'get_table_group_by_key']
 
-TableSN = namedtuple('TableSN', ['master_table_number',
-                                 'originating_centre',
-                                 'originating_subcentre',
-                                 'master_table_version',
-                                 'local_table_version'])
+TableGroupKey = namedtuple('TableGroupKey', ['tables_root_dir',
+                                             'wmo_tables_sn',
+                                             'local_tables_sn'])
 
 # The maximum number of table groups to be cached
 MAXIMUM_NUMBER_OF_CACHED_TABLE_GROUPS = 50
-
-DEFAULT_TABLES_DIR = os.path.join(BASE_DIR, 'tables')
 
 # TODO: These defaults should be externalized
 DEFAULT_MASTER_TABLE_NUMBER = 0
@@ -347,8 +340,8 @@ _BufrTableGroup = namedtuple('BufrTableGroup', ['A', 'B', 'C', 'D', 'R'])
 # BadDescriptor and errors out if it is actually used in later decoding
 class BufrTableGroup(_BufrTableGroup):
     """
-    A group of tables that belong to the same tables directory and SN. It is
-    responsible for getting or creating Descriptors via lookup.
+    A group of tables (A, B, C, D) that belong to the same tables directory and
+    SN. It is responsible for getting or creating Descriptors via lookup.
 
     Itself is created by the singleton TableCache.
     """
@@ -373,6 +366,10 @@ class BufrTableGroup(_BufrTableGroup):
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def key(self):
+        return TableGroupKey(self.A.tables_root_dir, self.A.wmo_tables_sn, self.A.local_tables_sn)
 
     def lookup(self, id_):
         """
@@ -413,9 +410,9 @@ class BufrTableGroup(_BufrTableGroup):
         return BufrTemplate(members=self.descriptors_from_ids(*ids))
 
 
-class TableCache(object):
+class TableGroupCache(object):
     """
-    The cache keep a single copy for a table with unique directory and sn. When
+    The cache keep a single copy for a table group with unique directory and sn. When
     it is requested multiple times, it only needs to be loaded from disk once.
 
     Note only Table B and D are really cached, Table A and C are singletons.
@@ -425,26 +422,24 @@ class TableCache(object):
         # TODO: set maximum number of table groups to be cached
         self._groups = {}
 
-    def get_table_group(self, tables_root_dir, wmo_tables_sn, local_tables_sn):
-        tables_key = (tables_root_dir, wmo_tables_sn, local_tables_sn)
-
-        if tables_key not in self._groups:
+    def get(self, table_group_key):
+        if table_group_key not in self._groups:
             # Honor the setting of maximum number of cached table groups
             if len(self._groups) >= MAXIMUM_NUMBER_OF_CACHED_TABLE_GROUPS:
                 for _ in range(len(self._groups) + 1 - MAXIMUM_NUMBER_OF_CACHED_TABLE_GROUPS):
                     self._groups.popitem()
 
-            a = TableA(*tables_key)
-            b = TableB(*tables_key)
-            c = TableC(*tables_key)
-            r = TableR(*tables_key)
-            d = TableD(b, c, r, *tables_key)
-            self._groups[tables_key] = BufrTableGroup(a, b, c, d, r)
+            a = TableA(*table_group_key)
+            b = TableB(*table_group_key)
+            c = TableC(*table_group_key)
+            r = TableR(*table_group_key)
+            d = TableD(b, c, r, *table_group_key)
+            self._groups[table_group_key] = BufrTableGroup(a, b, c, d, r)
 
-        return self._groups[tables_key]
+        return self._groups[table_group_key]
 
 
-_TABLE_CACHE = TableCache()
+_TABLE_GROUP_CACHE = TableGroupCache()
 
 
 def get_table_group(tables_root_dir=None,
@@ -490,4 +485,9 @@ def get_table_group(tables_root_dir=None,
         )
 
     # TODO: catch error on file reading?
-    return _TABLE_CACHE.get_table_group(tables_root_dir, wmo_tables_sn, local_tables_sn)
+    return get_table_group_by_key(TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn))
+
+
+def get_table_group_by_key(table_group_key):
+    # TODO: make table group key a separate type
+    return _TABLE_GROUP_CACHE.get(table_group_key)

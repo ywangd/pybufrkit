@@ -1,9 +1,12 @@
 from __future__ import absolute_import
 from __future__ import print_function
+
 import os
 import unittest
 import functools
+
 from six import PY3, binary_type, text_type
+# noinspection PyUnresolvedReferences
 from six.moves import range
 
 from pybufrkit.decoder import Decoder
@@ -40,13 +43,13 @@ class DecoderTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _compare(self, cmp_file_name):
+    def _compare(self, bufr_message, cmp_file_name):
         with open(os.path.join(DATA_DIR, cmp_file_name)) as ins:
             lines = ins.readlines()
 
         next_line = functools.partial(next, iter(lines))
-        for idx_subset in range(len(self.decoder.decoded_values_all_subsets)):
-            for idx, value in enumerate(self.decoder.decoded_values_all_subsets[idx_subset]):
+        for idx_subset in range(len(bufr_message.template_data.value.decoded_values_all_subsets)):
+            for idx, value in enumerate(bufr_message.template_data.value.decoded_values_all_subsets[idx_subset]):
                 cmp_line = next_line().strip()
                 if value is None:
                     line = '{} {}'.format(idx + 1, repr(value))
@@ -68,15 +71,15 @@ class DecoderTests(unittest.TestCase):
                     assert abs(value - cmp_value) < 1.0e6, \
                         'At line {}: {} != {}'.format(idx + 1, value, cmp_value)
 
-    def _print_values(self):
-        for idx_subset in range(len(self.decoder.decoded_values_all_subsets)):
-            for idx, value in enumerate(self.decoder.decoded_values_all_subsets[idx_subset]):
+    def _print_values(self, bufr_message):
+        for idx_subset in range(len(bufr_message.template_data.value.decoded_values_all_subsets)):
+            for idx, value in enumerate(bufr_message.template_data.value.decoded_values_all_subsets[idx_subset]):
                 print(idx + 1, repr(value))
 
     def do_test(self, filename_stub):
         s = read_bufr_file(filename_stub + '.bufr')
-        self.decoder.decode(s, filename_stub)
-        self._compare(filename_stub + '.values.cmp')
+        bufr_message = self.decoder.process(s, filename_stub)
+        self._compare(bufr_message, filename_stub + '.values.cmp')
 
     def test_decode(self):
         print()

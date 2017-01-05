@@ -3,10 +3,10 @@ The Descriptors should always be instantiated by Tables. Because the Tables
 provide caching and other wiring work. NEVER instantiated the Descriptors
 directly !!!!
 """
-from .utils import BpclError, INDENT_CHARS
+from pybufrkit.constants import INDENT_CHARS
 
 
-class DescriptorBase(object):
+class Descriptor(object):
     def __init__(self, id_):
         self.id = id_
 
@@ -31,14 +31,8 @@ class DescriptorBase(object):
     def Y(self):
         return self.id % 1000
 
-    def dumps(self):
-        return dumps_descriptor(self)
 
-    def _serialize(self, indent, count):
-        return ['{}{}  # [{}]'.format(indent, self, count)]
-
-
-class AssociatedDescriptor(DescriptorBase):
+class AssociatedDescriptor(Descriptor):
     """
     Associated field for element descriptor
     """
@@ -53,7 +47,7 @@ class AssociatedDescriptor(DescriptorBase):
         return 'A{:05d}'.format(self.id)
 
 
-class SkippedLocalDescriptor(DescriptorBase):
+class SkippedLocalDescriptor(Descriptor):
     """
     For an example, the skipped local descriptor. This descriptor can actually
     exist in an template as long as it is preceded by a 206YYY.
@@ -73,7 +67,7 @@ class SkippedLocalDescriptor(DescriptorBase):
         return 'S{:05d}'.format(self.id)
 
 
-class ElementDescriptor(DescriptorBase):
+class ElementDescriptor(Descriptor):
     def __init__(self, id_, name, unit, scale, refval, nbits,
                  crex_unit, crex_scale, crex_nchars):
         super(ElementDescriptor, self).__init__(id_)
@@ -87,9 +81,6 @@ class ElementDescriptor(DescriptorBase):
 
     def as_dict(self):
         return {self.id: (self.name, self.unit, self.scale, self.refval, self.nbits)}
-
-    def _serialize(self, indent, count):
-        return ['{}{}  # [{}]{}'.format(indent, self, count, self.name)]
 
 
 marker_descriptor_prefix = {
@@ -137,7 +128,7 @@ class MarkerDescriptor(ElementDescriptor):
         return md
 
 
-class ReplicationDescriptorBase(DescriptorBase):
+class ReplicationDescriptor(Descriptor):
     """
     The replication factor member stores only the replication factor descriptor
     NOT the actual value. So it is OK as it should be reusable for the same
@@ -154,11 +145,11 @@ class ReplicationDescriptorBase(DescriptorBase):
     Descriptor is spawn thus there is no risk on the associated replication
     factor descriptor gets mixed up.
 
-    :param [DescriptorBase] members: The group of descriptors to be replicated
+    :param [Descriptor] members: The group of descriptors to be replicated
     """
 
     def __init__(self, id_, members=None):
-        super(ReplicationDescriptorBase, self).__init__(id_)
+        super(ReplicationDescriptor, self).__init__(id_)
         self.members = members
 
     @property
@@ -181,7 +172,7 @@ class ReplicationDescriptorBase(DescriptorBase):
         return len(self.members)
 
 
-class FixedReplicationDescriptor(ReplicationDescriptorBase):
+class FixedReplicationDescriptor(ReplicationDescriptor):
     def __init__(self, id_, members=None):
         super(FixedReplicationDescriptor, self).__init__(id_, members)
 
@@ -189,32 +180,18 @@ class FixedReplicationDescriptor(ReplicationDescriptorBase):
     def n_repeats(self):
         return self.id % 1000
 
-    def _serialize(self, indent, count):
-        lines = ['{}{} {}  # [{}]'.format(indent, self, '{', count)]
-        for idx, member in enumerate(self.members):
-            lines.extend(member._serialize(indent + INDENT_CHARS, idx + 1))
-        lines.append('{}{}'.format(indent, '}'))
-        return lines
 
-
-class DelayedReplicationDescriptor(ReplicationDescriptorBase):
+class DelayedReplicationDescriptor(ReplicationDescriptor):
     def __init__(self, id_, members=None, factor=None):
         super(DelayedReplicationDescriptor, self).__init__(id_, members)
         self.factor = factor
 
     @property
     def n_repeats(self):
-        raise BpclError('Cannot access n_repeats for Delayed Replication')
-
-    def _serialize(self, indent, count):
-        lines = ['{}{} {} {}  # [{}] [0]'.format(indent, self, self.factor, '{', count)]
-        for idx, member in enumerate(self.members):
-            lines.extend(member._serialize(indent + INDENT_CHARS, idx + 1))
-        lines.append('{}{}'.format(indent, '}'))
-        return lines
+        raise RuntimeError('Cannot access n_repeats for Delayed Replication')
 
 
-class OperatorDescriptor(DescriptorBase):
+class OperatorDescriptor(Descriptor):
     def __init__(self, id_):
         super(OperatorDescriptor, self).__init__(id_)
 
@@ -228,7 +205,7 @@ class OperatorDescriptor(DescriptorBase):
 
 
 # noinspection PyAttributeOutsideInit
-class SequenceDescriptor(DescriptorBase):
+class SequenceDescriptor(Descriptor):
     def __init__(self, id_, name, members=None):
         super(SequenceDescriptor, self).__init__(id_)
         self.members = members
@@ -240,13 +217,6 @@ class SequenceDescriptor(DescriptorBase):
     def __getitem__(self, item):
         return self.members.__getitem__(item)
 
-    def _serialize(self, indent, count):
-        lines = ['{}{}  # [{}]{}'.format(indent, self, count, self.name)]
-        for idx, member in enumerate(self.members):
-            lines.extend(member._serialize(indent + INDENT_CHARS, idx + 1))
-        lines.append('{}{}'.format(indent, '}'))
-        return lines
-
 
 class BufrTemplate(SequenceDescriptor):
     def __init__(self, id_=999999, name='', members=None):
@@ -255,15 +225,40 @@ class BufrTemplate(SequenceDescriptor):
     def __str__(self):
         return 'TEMPLATE'
 
+    @property
+    def original_descriptor_ids(self):
+        """
+        Get the list of descriptor IDs that can be used to instantiate the Template
 
-class UndefinedDescriptor(DescriptorBase):
+        :rtype [int]
+        """
+        ret = []
+        members = list(self.members)
+        while members:
+            member = members.pop(0)
+            ret.append(member.id)
+            if isinstance(member, ReplicationDescriptor):
+                if isinstance(member, DelayedReplicationDescriptor):
+                    ret.append(member.factor.id)
+                members = member.members + members
+
+        return ret
+
+
+
+class UndefinedDescriptor(Descriptor):
     """
-    Undefined Descriptors are only useful when loading incompletely defined
-    table files. For an example, an element descriptor is used in one of the
-    sequence definition but the element descriptor is not defined. In this case,
-    a Undefined descriptor is created in place of the actual element descriptor
-    to allow tables to be load. As long as this Undefined descriptor is not used
-    in the actual decoding. It is harmless to stay in the tables.
+    Undefined Descriptors are only useful when loading BUFR tables that are NOT
+    completely defined. For an example, an element descriptor is used by one of
+    the sequence descriptor but the element descriptor itself is not defined in
+    Table B. In this case, an Undefined descriptor is created in place of the
+    actual element descriptor to allow tables to be loaded normally. As long as
+    the Undefined descriptor is not used in the actual decoding (the Template of
+    a BUFR message may not contain the descriptor at all), it is harmless to
+    stay in the loaded Table Group.
+
+    Ideally this is not necessary if all tables are well defined. However, in
+    practice, this is needed so some not-well-defined local tables can be used.
     """
 
     def __init__(self, id_):
@@ -277,13 +272,14 @@ class UndefinedElementDescriptor(UndefinedDescriptor):
     pass
 
 
-class UndefinedSequenceDescriptor(DescriptorBase):
+class UndefinedSequenceDescriptor(Descriptor):
     pass
 
 
 def flat_member_ids(descriptor):
     """
-    Return a flat list of expanded numeric IDs for the given descriptor.
+    Return a flat list of expanded numeric IDs for the given descriptor. The
+    list is generated by recursively flatten all its child members.
 
     :param descriptor:
     :return: [int]
@@ -303,48 +299,3 @@ def flat_member_ids(descriptor):
             ret.append(member.id)
 
     return ret
-
-
-def dumps_descriptor(descriptor, indent=''):
-    lines = _dumps_descriptor(descriptor, indent)
-    return '\n'.join(lines)
-
-
-def _dumps_descriptor(descriptor, indent):
-    lines = []
-
-    if isinstance(descriptor, SequenceDescriptor):
-        lines.append('{}{} {}'.format(indent, descriptor, descriptor.name))
-        for member in descriptor.members:
-            lines.extend(_dumps_descriptor(member, indent + INDENT_CHARS))
-
-    elif isinstance(descriptor, SkippedLocalDescriptor):
-        lines.append('{}{} {} bits'.format(indent, descriptor, descriptor.nbits))
-
-    elif isinstance(descriptor, MarkerDescriptor):
-        lines.append('{}{}'.format(indent, descriptor))
-
-    elif isinstance(descriptor, ElementDescriptor):
-        lines.append('{}{} {}'.format(indent, descriptor, descriptor.name))
-
-    elif isinstance(descriptor, FixedReplicationDescriptor):
-        lines.append('{}{}'.format(indent, descriptor))
-        for member in descriptor.members:
-            lines.extend(_dumps_descriptor(member, indent + INDENT_CHARS))
-
-    elif isinstance(descriptor, DelayedReplicationDescriptor):
-        lines.append('{}{}'.format(indent, descriptor))
-        lines.extend(_dumps_descriptor(descriptor.factor, indent + '.' * len(INDENT_CHARS)))
-        for member in descriptor.members:
-            lines.extend(_dumps_descriptor(member, indent + INDENT_CHARS))
-
-    elif isinstance(descriptor, OperatorDescriptor):
-        lines.append('{}{}'.format(indent, descriptor))
-
-    elif isinstance(descriptor, AssociatedDescriptor):
-        lines.append('{}{} {} bits'.format(indent, descriptor, descriptor.nbits))
-
-    else:
-        raise BpclError('Unknown descriptor: {}'.format(descriptor))
-
-    return lines

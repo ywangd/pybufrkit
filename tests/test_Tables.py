@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import os
 import unittest
 
+from pybufrkit.renderer import FlatTextRenderer
 from pybufrkit.tables import get_table_group
 from pybufrkit.descriptors import flat_member_ids
 
@@ -126,13 +127,14 @@ class TablesTests(unittest.TestCase):
 
     def setUp(self):
         self.table_group = get_table_group()
+        self.flat_text_renderer = FlatTextRenderer()
 
     def tearDown(self):
         pass
 
     def test_table_group_01(self):
         template = self.table_group.lookup(340009)
-        assert template.dumps() == table_group_01_cmp
+        assert self.flat_text_renderer.render(template) == table_group_01_cmp
         assert flat_member_ids(template) == [
             1007, 1031, 2019, 2020, 4001, 4002, 4003, 4004, 4005, 4006, 5040,
             201136, 5041, 201000, 25071, 5001, 5001, 6001, 6001,
@@ -140,4 +142,4 @@ class TablesTests(unittest.TestCase):
 
     def test_table_group_02(self):
         template = self.table_group.lookup(340008)
-        assert template.dumps() == table_group_02_cmp
+        assert self.flat_text_renderer.render(template) == table_group_02_cmp

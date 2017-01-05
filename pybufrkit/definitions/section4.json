@@ -1,0 +1,24 @@
+{
+  "index": 4,
+  "description": "Data section",
+  "default": true,
+  "optional": false,
+  "parameters": [
+    {
+      "name": "section_length",
+      "nbits": 24,
+      "type": "uint"
+    },
+    {
+      "name": "reserved_bits",
+      "nbits": 8,
+      "type": "bin"
+    },
+    {
+      "name": "template_data",
+      "nbits": 0,
+      "type": "template_data",
+      "as_property": true
+    }
+  ]
+}
