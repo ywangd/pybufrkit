@@ -1,12 +1,26 @@
 """
-The Descriptors should always be instantiated by Tables. Because the Tables
-provide caching and other wiring work. NEVER instantiated the Descriptors
-directly !!!!
-"""
-from pybufrkit.constants import INDENT_CHARS
+pybufrkit.descriptors
+~~~~~~~~~~~~~~~~~~~~~
 
+The Descriptors should always be instantiated by Tables. Because the Tables
+provide caching and other wiring work. Do NOT instantiated the Descriptors
+directly!!
+
+This module contains many Descriptor classes, covering not only the canonical
+descriptor types of the BUFR spec, but also Conceptual Descriptors that help the
+processing. For an example, an AssociatedDescriptor class is needed to represent
+associated values signified by operator descriptor 204YYY.
+"""
+from __future__ import absolute_import
+from __future__ import print_function
 
 class Descriptor(object):
+    """
+    This class is the base class of all BUFR descriptors. It provides common
+    machinery for Descriptors.
+
+    :param int id_: The descriptor ID.
+    """
     def __init__(self, id_):
         self.id = id_
 
@@ -21,20 +35,31 @@ class Descriptor(object):
 
     @property
     def F(self):
+        """
+        The F value of the descriptor.
+        """
         return self.id // 100000
 
     @property
     def X(self):
+        """
+        The X value of the descriptor.
+        """
         return self.id // 1000 % 100
 
     @property
     def Y(self):
+        """
+        THe Y value of the descriptor.
+        """
         return self.id % 1000
 
 
 class AssociatedDescriptor(Descriptor):
     """
     Associated field for element descriptor
+
+    :param int nbits: Number of bits used by this descriptor.
     """
 
     def __init__(self, id_, nbits):
@@ -49,8 +74,8 @@ class AssociatedDescriptor(Descriptor):
 
 class SkippedLocalDescriptor(Descriptor):
     """
-    For an example, the skipped local descriptor. This descriptor can actually
-    exist in an template as long as it is preceded by a 206YYY.
+    The skipped local descriptor is a placeholder for any descriptors followed by
+    operator descriptor 206YYY.
     """
 
     def __init__(self, id_, nbits):
@@ -68,6 +93,19 @@ class SkippedLocalDescriptor(Descriptor):
 
 
 class ElementDescriptor(Descriptor):
+    """
+    Element Descriptor 0XXYYY
+
+    :param int id_: The descriptor ID
+    :param str name: Name of the descriptor
+    :param str unit: Units of the descriptor
+    :param int scale: Scale factor of the descriptor value
+    :param int refval: Reference value of the descriptor value
+    :param int nbits: The number of bits used by the descriptor
+    :param str crex_unit: Units of the descriptor for CREX spec
+    :param int crex_scale: Scale factor of the descriptor value for CREX Spec
+    :param int crex_nchars: Number of characters used by the descriptor for CREX Spec
+    """
     def __init__(self, id_, name, unit, scale, refval, nbits,
                  crex_unit, crex_scale, crex_nchars):
         super(ElementDescriptor, self).__init__(id_)
@@ -112,10 +150,11 @@ class MarkerDescriptor(ElementDescriptor):
         scale, refval and nbits.
 
         :param ElementDescriptor ed: The element descriptor
-        :param marker_id: The marker operator ID
-        :param scale: New override value for scale.
-        :param refval:
-        :param nbits:
+        :param int marker_id: The marker operator ID
+        :param int scale: Overridden value for scale.
+        :param int refval: Overridden value for reference.
+        :param int nbits: Overridden value for number of bits.
+        :rtype: MarkerDescriptor
         """
         md = MarkerDescriptor(
             ed.id, ed.name, ed.unit,
@@ -154,6 +193,10 @@ class ReplicationDescriptor(Descriptor):
 
     @property
     def n_items(self):
+        """
+        Number of descriptors to be replicated. This value is decoded from the
+        ID of the descriptor.
+        """
         return (self.id // 1000) % 100
 
     @property
@@ -173,15 +216,25 @@ class ReplicationDescriptor(Descriptor):
 
 
 class FixedReplicationDescriptor(ReplicationDescriptor):
+    """
+    Fixed replication Descriptor 1XXYYY
+    """
     def __init__(self, id_, members=None):
         super(FixedReplicationDescriptor, self).__init__(id_, members)
 
     @property
     def n_repeats(self):
+        """
+        Number of times to perform the replication. This value is decoded
+        directly from the descriptor ID.
+        """
         return self.id % 1000
 
 
 class DelayedReplicationDescriptor(ReplicationDescriptor):
+    """
+    Delayed replication Descriptor 1XX000
+    """
     def __init__(self, id_, members=None, factor=None):
         super(DelayedReplicationDescriptor, self).__init__(id_, members)
         self.factor = factor
@@ -192,6 +245,9 @@ class DelayedReplicationDescriptor(ReplicationDescriptor):
 
 
 class OperatorDescriptor(Descriptor):
+    """
+    Operator Descriptor 2XXYYY
+    """
     def __init__(self, id_):
         super(OperatorDescriptor, self).__init__(id_)
 
@@ -206,6 +262,9 @@ class OperatorDescriptor(Descriptor):
 
 # noinspection PyAttributeOutsideInit
 class SequenceDescriptor(Descriptor):
+    """
+    Sequence Descriptor 3XXYYY
+    """
     def __init__(self, id_, name, members=None):
         super(SequenceDescriptor, self).__init__(id_)
         self.members = members
@@ -219,6 +278,10 @@ class SequenceDescriptor(Descriptor):
 
 
 class BufrTemplate(SequenceDescriptor):
+    """
+    This class represents a BUFR Template. A Template is composed of one or more
+    BUFR Descriptors. It is used in a BUFR message to describe the data section.
+    """
     def __init__(self, id_=999999, name='', members=None):
         super(BufrTemplate, self).__init__(id_, name, members)
 
@@ -228,7 +291,7 @@ class BufrTemplate(SequenceDescriptor):
     @property
     def original_descriptor_ids(self):
         """
-        Get the list of descriptor IDs that can be used to instantiate the Template
+        Get the list of descriptor IDs that can be used to instantiate the Template.
 
         :rtype [int]
         """
@@ -243,7 +306,6 @@ class BufrTemplate(SequenceDescriptor):
                 members = member.members + members
 
         return ret
-
 
 
 class UndefinedDescriptor(Descriptor):
@@ -281,7 +343,7 @@ def flat_member_ids(descriptor):
     Return a flat list of expanded numeric IDs for the given descriptor. The
     list is generated by recursively flatten all its child members.
 
-    :param descriptor:
+    :param Descriptor descriptor: A BUFR descriptor
     :return: [int]
     """
     ret = []

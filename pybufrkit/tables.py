@@ -1,26 +1,25 @@
 """
-The Table Cache makes sure tables of same version only get loaded from
-disk once. When its get_table_group method is called, it returned a
+pybufrkit.tables
+~~~~~~~~~~~~~~~~
+
+The Table Cache makes sure tables of the same version only get loaded from
+disk once. When the get_table_group method is called, it returned a
 group of table either from the cache or loaded from disk if they are not
 available in the cache yet (and save them to the cache for future use).
 
-A Table Group contains a set of tables, e.g. A, B, C, D, that belong to the
-same version.
+* A Table Group contains a set of tables, e.g. A, B, C, D, that belong to the
+  same table group key.
 
-A Table instance, e.g. B, D, maintains a cache of its descriptors so that
-only a single instance is created for an unique descriptor.
+* A Table instance, e.g. B, D, maintains a cache of its descriptors so that
+  only a single instance is created for an unique descriptor.
 
-The Pesudo Replication Descriptor table is created to make the API for all
-tables look alike.
+* The Pseudo Replication Descriptor table is created to make the API for all
+  tables look alike.
 
-TableCache --creates--> TableGroup --lookup--> Descriptors/Template
+* TableCache --creates--> TableGroup --lookup--> Descriptors/Template
 
-Template are then processed by Decoder in conjunction with a BitStream to
-decode and create a Bufr object.
-
-The Bufr object with the data populated can then do various format transforms,
-e.g. decoded view of the Template, i.e. the Descriptors are expanded and
-replicated to match the actual values.
+Template are then processed by Coder in conjunction with a bit operator to
+create a BufrMessage object.
 """
 from __future__ import absolute_import
 import os
@@ -244,7 +243,7 @@ class TableC(BaseTable):
 
 class TableR(BaseTable):
     """
-    This is a Pesudo-table for hosting replication descriptors. NOTE that
+    This is a Pseudo-table for hosting replication descriptors. NOTE that
     replication descriptors are NOT cached as the same replication descriptor
     can be applied to different group of descriptors. However, since Sequence
     Descriptors are cached, they will also cache the replication descriptors
@@ -450,15 +449,16 @@ def get_table_group(tables_root_dir=None,
                     local_table_version=None,
                     normalize=True):
     """
-    Convenient function for TableCache's get_table_group method.
+    Retrieve a Table Group using given information that can be converted
+    to a Table Group Key.
 
     :param master_table_number:
     :param originating_centre:
     :param originating_subcentre:
     :param master_table_version:
     :param local_table_version:
-    :param tables_root_dir:
-    :param normalize: Whether the program tries to fix non-exist tables SN by
+    :param str tables_root_dir: Root directory to read the BUFR tables
+    :param int|bool normalize: Whether the program tries to fix non-exist tables SN by
                       using default values. This is generally useful for
                       decoding. But could be misleading when encoding.
     :rtype: BufrTableGroup
@@ -489,5 +489,10 @@ def get_table_group(tables_root_dir=None,
 
 
 def get_table_group_by_key(table_group_key):
-    # TODO: make table group key a separate type
+    """
+    Retrieve a Table Group with the given key.
+
+    :param TableGroupKey table_group_key: The key for a table group.
+    :rtype: BufrTableGroup
+    """
     return _TABLE_GROUP_CACHE.get(table_group_key)

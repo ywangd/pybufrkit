@@ -1,3 +1,8 @@
+"""
+pybufrkit.encoder
+~~~~~~~~~~~~~~~~~
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -47,13 +52,13 @@ class Encoder(Coder):
                  definitions_dir=None,
                  tables_root_dir=None,
                  ignore_declared_length=False,
-                 compiled_template_cache_max=0):
+                 compiled_template_cache_max=None):
 
         super(Encoder, self).__init__(definitions_dir, tables_root_dir)
         self.ignore_declared_length = ignore_declared_length
 
-        # Only enable template compilation if non-zero cache is requested
-        if compiled_template_cache_max > 0:
+        # Only enable template compilation if cache is requested
+        if compiled_template_cache_max is not None:
             self.compiled_template_manager = CompiledTemplateManager(compiled_template_cache_max)
             log.debug('Template compilation enabled with cache size of {}'.format(compiled_template_cache_max))
         else:

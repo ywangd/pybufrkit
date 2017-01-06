@@ -1,3 +1,8 @@
+"""
+pybufrkit.templatecompiler
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -396,11 +401,12 @@ class CompiledTemplateManager(object):
             log.debug('Cached version not available. Compiling now ...')
             compiled_template = self.template_compiler.process(template, table_group)
 
-            # TODO: Better cache invalidate algorithm
-            if len(self.cache) >= self.cache_max:
-                self.cache.popitem()
+            if self.cache_max > 0:
+                # TODO: Better cache invalidate algorithm
+                if len(self.cache) >= self.cache_max:
+                    self.cache.popitem()
 
-            self.cache[key_of_compiled_template] = compiled_template
+                self.cache[key_of_compiled_template] = compiled_template
 
         return compiled_template
 

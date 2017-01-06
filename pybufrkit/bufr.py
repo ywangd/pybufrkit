@@ -1,5 +1,8 @@
 """
-Classes for representing BUFR message.
+pybufrkit.bufr
+~~~~~~~~~~~~~~
+
+Classes for representing a BUFR message and its components.
 """
 from __future__ import absolute_import
 
@@ -18,6 +21,9 @@ log = logging.getLogger(__file__)
 
 
 class SectionParameter(object):
+    """
+    This class represents a Parameter of a Bufr Section.
+    """
     def __init__(self, name, nbits, data_type, expected, as_property):
         # type: (str, int, str, object, bool) -> None
         self.name = name
@@ -35,8 +41,8 @@ class SectionParameter(object):
 
 class SectionNamespace(OrderedDict):
     """
-    Namespace of a section is a ordered dictionary that store the decoded
-    parameters and their values.
+    A Section Namespace is an ordered dictionary that store the decoded
+    parameters with their names as the keys.
     """
 
     def __str__(self):
@@ -47,9 +53,7 @@ class SectionNamespace(OrderedDict):
 # noinspection PyUnresolvedReferences
 class BufrSection(object):
     """
-    An abstract base class of the Sections in a BufrMessage. It provides basic
-    infrastructure such as store and retrieve parameters from the namespace.
-    Also provides the decode template method.
+    This class represents a Section in a Bufr Message.
     """
 
     def __init__(self):
@@ -74,21 +78,41 @@ class BufrSection(object):
         return len(self._namespace)
 
     def set_metadata(self, k, v):
+        """
+        Set value to a metadata of the given key.
+
+        :param str k: Name of the metadata
+        :param object v: Value of the metadata
+        """
         # type: (str, object) -> None
         object.__setattr__(self, k, v)
 
     def get_metadata(self, k):
+        """
+        Get value for metadata of the given name.
+
+        :param str k: Name of the metadata.
+        :return: Value of the metadata
+        """
         # type: (str) -> object
         return object.__getattribute__(self, k)
 
     def add_parameter(self, parameter):
+        """
+        Add a parameter to the section object.
+
+        :param SectionParameter parameter:
+        """
         parameter.parent = self
         self._namespace[parameter.name] = parameter
 
     def get_parameter_offset(self, parameter_name):
         """
-        Get the bit offset to the beginning of the section for parameter of
+        Get the bit offset from the beginning of the section for parameter of
         the given name.
+
+        :return: The bit offset.
+        :rtype: int
         """
         nbits_offset = 0
         for parameter in self:
@@ -131,32 +155,18 @@ class SectionConfigurer(object):
                 if data.get('default', False) and edition_key != DEFAULT_SECTION_EDITION:
                     config[DEFAULT_SECTION_EDITION] = data
 
-    @staticmethod
-    def get_section_index_and_edition(fname):
-        """
-        Get Section Index and version from the file name
-        :param fname: The base file name
-        :return: (int, int)
-        """
-        expr = os.path.splitext(fname)[0][7:]
-        if '-' in expr:
-            fields = expr.split('-')
-            return int(fields[0]), int(fields[1])
-        else:
-            return int(expr), None
-
     def configure_section(self, bufr_message, section_index, configuration_transformers=()):
         """
         Initialise and Configure a section for the give section index and
         version.
 
-        :type bufr_message: BufrMessage
-        :type section_index: int
-        :param configuration_transformers: A collection of configuration
+        :param BufrMessage bufr_message: The Bufr Message object to configure
+        :param int section_index: (Zero-based) index of the section
+        :param collection configuration_transformers: A collection of configuration
             transformation functions. These functions make it possible to use
             the same set of JSON files while still dynamically providing
             different coder behaviours.
-        :return: The configured section or None if not present
+        :return: The configured section or ``None`` if not present
         """
 
         config = self.get_configuration(bufr_message, section_index)
@@ -222,10 +232,10 @@ class SectionConfigurer(object):
         and also populate the value of each section parameter with the given list
         of values. Used by the encoder.
 
-        :param bufr_message:
-        :param section_index:
-        :param values: A list of values for the parameters.
-        :return: The configured section or None if the section is not present
+        :param BufrMessage bufr_message: The BUFR message object to configure
+        :param int section_index: The zero-based section index
+        :param list values: A list of values for the parameters.
+        :return: The configured section or ``None`` if the section is not present
         """
         section = self.configure_section(bufr_message, section_index)
         if section is not None:
@@ -238,10 +248,27 @@ class SectionConfigurer(object):
         return section
 
     @staticmethod
+    def get_section_index_and_edition(fname):
+        """
+        Get Section Index and version from file name of a configuration file.
+
+        :param str fname: The base file name
+        :return: The index and edition numbers.
+        """
+        expr = os.path.splitext(fname)[0][7:]
+        if '-' in expr:
+            fields = expr.split('-')
+            return int(fields[0]), int(fields[1])
+        else:
+            return int(expr), None
+
+    @staticmethod
     def info_configuration(config):
         """
         This is a configuration transformation function to make the decoder work
         only for the part of message before the template data.
+
+        :param dict config: The config JSON object loaded from a configuration file.
         """
         parameter_types = [parameter['type'] for parameter in config['parameters']]
         if PARAMETER_TYPE_TEMPLATE_DATA in parameter_types:
@@ -256,7 +283,8 @@ class SectionConfigurer(object):
     def ignore_value_expectation(config):
         """
         Remove any expectation value check.
-        :param config: The section configuration JSON object
+
+        :param dict config: The config JSON object loaded from a configuration file.
         """
         new_config = deepcopy(config)
         for parameter in new_config['parameters']:
@@ -268,8 +296,14 @@ class SectionConfigurer(object):
 class BufrMessage(object):
     """
     This class represents a single BUFR message that is comprised of different
-    sections. Note this is different from BufrTemplateData which is part of the
-    overall message and dedicated to the Template Data.
+    sections. Note this is different from BufrTemplateData which is only part of
+    the overall message and dedicates to data associated to the Template.
+
+    Properties of this class are proxies to actual fields of its sections. They
+    are set by the sections when they are processed. The proxy approach allows
+    these properties to be referenced in a consistent way no matter where they
+    actually come from. This makes sections loosely coupled, i.e. one section
+    does not need to know about other sections, and free to change if needed.
     """
 
     def __init__(self):
@@ -285,18 +319,20 @@ class BufrMessage(object):
     def add_section(self, section):
         """
         Add a section to the message
-        :type section: BufrSection
+
+        :param BufrSection section: The Bufr Section to add
         """
         self.sections.append(section)
 
     def wire(self):
+        """
+        Wire the flat list of descriptors and values to a full hierarchical
+        structure. Also allocate all attributes to their corresponding
+        descriptors.
+        """
         self.template_data.value.wire()
 
-    # The following properties are proxies to actual fields of the sections.
-    # They are set by the sections when they are decoded. The proxy approach
-    # allows these properties to be referenced in a consistent way regardless
-    # where they actually come from. This makes sections loosely coupled and
-    # free to change if needed.
+    # Proxy properties follows
     @property
     def length(self):
         return self._length

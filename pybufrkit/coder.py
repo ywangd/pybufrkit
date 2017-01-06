@@ -1,3 +1,8 @@
+"""
+pybufrkit.coder
+~~~~~~~~~~~~~~~
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -612,6 +617,7 @@ class Coder(object):
         Get value of the latest delayed replication factor. This is called when
         processing through the Template. But the actual implementation will be
         provided by sub-classes.
+
         :param state:
         :return: The value for the latest processed delayed replication factor
         """
@@ -620,6 +626,7 @@ class Coder(object):
     def define_bitmap(self, state, reuse):
         """
         Define a bit map.
+
         :param state:
         :param reuse: Is this bitmap for reuse?
         """
@@ -628,6 +635,7 @@ class Coder(object):
     def process_numeric(self, state, bit_operator, descriptor, nbits, scale_powered, refval):
         """
         Process a descriptor that has numeric value.
+
         :param descriptor: A BUFR descriptor that has numeric value
         :param nbits: Number of bits to process for the descriptor.
         :param scale_powered: 10 to the scale factor power, i.e. 10 ** scale
@@ -638,6 +646,7 @@ class Coder(object):
     def process_string(self, state, bit_operator, descriptor, nbytes):
         """
         Process a descriptor that has string value
+
         :param descriptor: The BUFR descriptor
         :param nbytes: Number of BYTES to process for the descriptor.
         """
@@ -647,6 +656,7 @@ class Coder(object):
         """
         Process a descriptor that has code/flag value. A code/flag value
         does not need to scale and refval.
+
         :param descriptor: The BUFR descriptor
         :param nbits: Number of bits to process for the descriptor.
         """
@@ -655,6 +665,7 @@ class Coder(object):
     def process_new_refval(self, state, bit_operator, descriptor, nbits):
         """
         Process the new reference value for the given descriptor.
+
         :param descriptor: The BUFR descriptor.
         :param nbits: Number of bits to process.
         """
@@ -665,6 +676,7 @@ class Coder(object):
                                       refval_factor):
         """
         Process a descriptor that has numeric value with new reference value.
+
         :param descriptor: The BUFR descriptor.
         :param nbits: Number of bits to process for the descriptor.
         :param scale_powered: 10 to the scale factor power, i.e. 10 ** scale
@@ -675,6 +687,7 @@ class Coder(object):
     def process_constant(self, state, bit_operator, descriptor, value):
         """
         Process a constant, with no bit operations, for the given descriptor.
+
         :param descriptor: The BUFR descriptor.
         :param value: The constant value.
         """

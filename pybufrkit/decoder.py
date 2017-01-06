@@ -1,3 +1,8 @@
+"""
+pybufrkit.decoder
+~~~~~~~~~~~~~~~~~
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -22,15 +27,19 @@ log = logging.getLogger(__file__)
 
 # noinspection PyUnusedLocal,PyAttributeOutsideInit
 class Decoder(Coder):
+    """
+    The decoder takes a bytes type string and decode it to a BUFR Message object.
+    """
+
     def __init__(self,
                  definitions_dir=None,
                  tables_root_dir=None,
-                 compiled_template_cache_max=0):
+                 compiled_template_cache_max=None):
 
         super(Decoder, self).__init__(definitions_dir, tables_root_dir)
 
-        # Only enable template compilation if non-zero cache is requested
-        if compiled_template_cache_max > 0:
+        # Only enable template compilation if cache is requested
+        if compiled_template_cache_max is not None:
             self.compiled_template_manager = CompiledTemplateManager(compiled_template_cache_max)
             log.debug('Template compilation enabled with cache size of {}'.format(compiled_template_cache_max))
         else:

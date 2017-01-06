@@ -1,7 +1,15 @@
 """
-Python Toolkit for BUFR Messages
+pybufrkit
+~~~~~~~~~
 
-Decode and encode BUFR messages with Pure Python.
+Work with WMO BUFR messages with Pure Python.
+
+.. note:: APIs of version 0.2.0 are breaking changes from those of version 0.1.x
+          and it is always recommended to upgrade to the latest version.
+
+:github: https://github.com/ywangd/pybufrkit
+:docs: http://pybufrkit.readthedocs.io/
+:author: Yang Wang (ywangd@gmail.com)
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -48,7 +56,7 @@ def main():
         dest='sub_command',
         title='List of sub-commands',
         metavar='sub-command',
-        help='Use "{} sub-command -h" for more help on a sub-command'.format(__package__)
+        help='Use "{} sub-command -h" for more help on a sub-command'.format(__name__)
     )
 
     decode_parser = subparsers.add_parser('decode',
@@ -66,7 +74,7 @@ def main():
                                action='store_true',
                                help='Do not validate value expectations, e.g. 7777 stop signature')
     decode_parser.add_argument('--compiled-template-cache-max',
-                               type=int, default=0,
+                               type=int,
                                help='The maximum number of compiled templates to cache. '
                                     'A value greater than 0 is needed to activate template compilation.')
 
@@ -80,7 +88,7 @@ def main():
                                nargs='?', default='out.bufr',
                                help='The output BUFR file, default out.bufr')
     encode_parser.add_argument('--compiled-template-cache-max',
-                               type=int, default=0,
+                               type=int,
                                help='The maximum number of compiled templates to cache. '
                                     'A value greater than 0 is needed to activate template compilation.')
 

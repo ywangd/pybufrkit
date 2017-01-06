@@ -1,3 +1,8 @@
+"""
+pybufrkit.renderer
+~~~~~~~~~~~~~~~~~~
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -18,12 +23,17 @@ from pybufrkit.templatedata import (TemplateData, NoValueNode, SequenceNode,
 
 
 class Renderer(object):
+    """
+    This class is the abstract base Renderer. A renderer provides the contract
+    to take in an object and convert it into a string representation.
+    """
     def render(self, obj):
         """
         Render the given object as string.
 
-        :param obj: The object to render
-        :return: str
+        :param object obj: The object to render
+        :return: A string representation of the given object.
+        :rtype: str
         """
         if isinstance(obj, BufrMessage):
             return self._render_bufr_message(obj)
@@ -48,6 +58,9 @@ class Renderer(object):
 
 
 class FlatTextRenderer(Renderer):
+    """
+    This renderer converts the given object by flatten all its sub-structures.
+    """
     def _render_bufr_message(self, bufr_message):
         ret = [str(bufr_message.table_group_key)]
         for section in bufr_message.sections:
@@ -136,6 +149,10 @@ class FlatTextRenderer(Renderer):
 
 
 class FlatJsonRenderer(Renderer):
+    """
+    This renderer converts the given object to a JSON string by flatten its
+    internal structure.
+    """
     def _render_bufr_message(self, bufr_message):
         """
         Produce a JSON string for the BUFR message that can be encoded back to
@@ -161,6 +178,10 @@ class FlatJsonRenderer(Renderer):
 
 
 class NestedTextRenderer(Renderer):
+    """
+    This renderer converts the given object to a text string by honoring all its
+    nested sub-structures.
+    """
     def _render_bufr_message(self, bufr_message):
         """
         Render the template data in a hierarchical format for the BUFR message.

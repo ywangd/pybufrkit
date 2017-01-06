@@ -1,4 +1,7 @@
 """
+pybufrkit.templatedata
+~~~~~~~~~~~~~~~~~~~~~~
+
 The TemplateData object is dedicated to the data decoded for the template of a
 BUFR message, while Bufr object is for the entire BUFR message. The object
 provides a fully hierarchical view of the data with attributes properly
