@@ -19,7 +19,9 @@ import os
 import json
 import logging
 import argparse
+import six
 
+from pybufrkit.constants import UNITS_FLAG_TABLE, UNITS_CODE_TABLE, UNITS_COMMON_CODE_TABLE_C1
 from pybufrkit.decoder import Decoder
 from pybufrkit.encoder import Encoder
 from pybufrkit.descriptors import ElementDescriptor
@@ -232,11 +234,19 @@ def main():
                                                       descriptor.scale,
                                                       descriptor.refval,
                                                       descriptor.nbits))
-                    if ns.code_and_flag and descriptor.unit in ('CODE TABLE', 'FLAG TABLE'):
+                    if ns.code_and_flag and descriptor.unit in (UNITS_FLAG_TABLE,
+                                                                UNITS_CODE_TABLE,
+                                                                UNITS_COMMON_CODE_TABLE_C1):
                         code_and_flag = table_group.B.code_and_flag_for_descriptor(descriptor)
                         if code_and_flag:
                             for v, description in code_and_flag:
-                                print(u'{:8d} {}'.format(v, description))
+                                output = u'{:8d} {}'.format(v, description)
+                                # With Python 2, some terminal utilities, e.g. more, redirect to file,
+                                # cause errors when unicode string is printed. The fix is to encode
+                                # them before print.
+                                if six.PY2:
+                                    output = output.encode('utf-8', 'ignore')
+                                print(output)
                 else:
                     print(flat_text_render.render(descriptor))
 
