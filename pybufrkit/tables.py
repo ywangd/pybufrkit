@@ -41,6 +41,8 @@ from pybufrkit.descriptors import (ElementDescriptor,
 
 __all__ = ['TableGroupKey', 'get_table_group', 'get_table_group_by_key']
 
+log = logging.getLogger(__file__)
+
 TableGroupKey = namedtuple('TableGroupKey', ['tables_root_dir',
                                              'wmo_tables_sn',
                                              'local_tables_sn'])
@@ -143,7 +145,6 @@ def normalize_tables_sn(tables_root_dir,
 
 class BaseTable(object):
     def __init__(self, tables_root_dir, wmo_tables_sn, local_tables_sn):
-        self.logger = logging.getLogger('PyBufrKit.{}'.format(self.__class__.__name__))
         self.tables_root_dir, self.wmo_tables_sn, self.local_tables_sn = (
             tables_root_dir, wmo_tables_sn, local_tables_sn
         )
@@ -484,8 +485,10 @@ def get_table_group(tables_root_dir=None,
             local_table_version
         )
 
+    table_group_key = TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn)
+
     # TODO: catch error on file reading?
-    return get_table_group_by_key(TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn))
+    return get_table_group_by_key(table_group_key)
 
 
 def get_table_group_by_key(table_group_key):
@@ -495,4 +498,5 @@ def get_table_group_by_key(table_group_key):
     :param TableGroupKey table_group_key: The key for a table group.
     :rtype: BufrTableGroup
     """
+    log.debug('Reading table group of key: {}'.format(table_group_key))
     return _TABLE_GROUP_CACHE.get(table_group_key)

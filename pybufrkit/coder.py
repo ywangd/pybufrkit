@@ -43,6 +43,17 @@ BSRModifier = namedtuple('BSRModifier',
 log = logging.getLogger(__file__)
 
 
+class AuditedList(list):
+    """
+    This class provides wrappers for some list methods, e.g. append, so that
+    it is possible to execute additional code when the method is invoked.
+    """
+
+    def append(self, p_object):
+        log.debug('{!r}'.format(p_object))
+        super(AuditedList, self).append(p_object)
+
+
 class CoderState(object):
     """
     The state of VM for keeping track of variables when a VM is working. The use
@@ -78,8 +89,13 @@ class CoderState(object):
         self.decoded_descriptors = self.decoded_descriptors_all_subsets[0]
         self.bitmap_links = self.bitmap_links_all_subsets[0]
 
+        # When debug is turned on, use AuditedList for more logging messages.
         # Each element in the values all_subsets is different compressed or not
-        self.decoded_values_all_subsets = decoded_values_all_subsets or [[] for _ in range(n_subsets)]
+        if logging.root.level == logging.getLevelName('DEBUG'):
+            self.decoded_values_all_subsets = decoded_values_all_subsets or [AuditedList() for _ in range(n_subsets)]
+        else:
+            self.decoded_values_all_subsets = decoded_values_all_subsets or [[] for _ in range(n_subsets)]
+
         self.decoded_values = self.decoded_values_all_subsets[0]
 
         self.idx_value = 0  # only needed for encoder

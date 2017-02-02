@@ -10,6 +10,7 @@ import abc
 import six
 
 from pybufrkit.constants import *
+from pybufrkit.errors import BitReadError
 
 
 class BitReader(object):
@@ -115,22 +116,36 @@ class BitStringBitReader(BitReader):
     def __init__(self, s):
         import bitstring
         self.bit_stream = bitstring.BitStream(bytes=s)
+        self.bitstring_Error = bitstring.Error
 
     def get_pos(self):
         return self.bit_stream.pos
 
+    def _bit_stream_read(self, fmt_string):
+        """
+        This wrapper method is mainly used to wrap the bitstring error type as a
+        PyBufrkitError type.
+
+        :param str fmt_string: The format string used to read the bits
+        :return: Value of requested type.
+        """
+        try:
+            return self.bit_stream.read(fmt_string)
+        except self.bitstring_Error as e:
+            raise BitReadError(e.msg)
+
     def read_bytes(self, nbytes):
-        return self.bit_stream.read('bytes:{}'.format(nbytes))
+        return self._bit_stream_read('bytes:{}'.format(nbytes))
 
     def read_uint(self, nbits):
         fmt_string = ('uintbe:{}' if nbits % 8 == 0 else 'uint:{}').format(nbits)
-        return self.bit_stream.read(fmt_string)
+        return self._bit_stream_read(fmt_string)
 
     def read_bool(self):
-        return self.bit_stream.read('bool')
+        return self._bit_stream_read('bool')
 
     def read_bin(self, nbits):
-        return self.bit_stream.read('bin:{}'.format(nbits))
+        return self._bit_stream_read('bin:{}'.format(nbits))
 
 
 class BitStringBitWriter(BitWriter):

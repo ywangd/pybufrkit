@@ -13,6 +13,7 @@ import json
 from six.moves import range, zip
 
 from pybufrkit.constants import *
+from pybufrkit.errors import UnknownDescriptor
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicationDescriptor,
                                    DelayedReplicationDescriptor, OperatorDescriptor,
@@ -143,7 +144,7 @@ class FlatTextRenderer(Renderer):
             lines.append('{}{} {} bits'.format(indent, descriptor, descriptor.nbits))
 
         else:
-            raise RuntimeError('Unknown descriptor: {}'.format(descriptor))
+            raise UnknownDescriptor('{}'.format(descriptor))
 
         return lines
 

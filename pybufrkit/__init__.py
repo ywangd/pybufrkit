@@ -22,6 +22,7 @@ import argparse
 import six
 
 from pybufrkit.constants import UNITS_FLAG_TABLE, UNITS_CODE_TABLE, UNITS_COMMON_CODE_TABLE_C1
+from pybufrkit.errors import *
 from pybufrkit.decoder import Decoder
 from pybufrkit.encoder import Encoder
 from pybufrkit.descriptors import ElementDescriptor
@@ -153,111 +154,118 @@ def main():
         format='%(asctime)s: %(levelname)s: %(funcName)s: %(message)s'
     )
 
-    if ns.sub_command == 'decode':
-        decoder = Decoder(definitions_dir=ns.definitions_directory,
-                          tables_root_dir=ns.tables_root_directory,
-                          compiled_template_cache_max=ns.compiled_template_cache_max)
+    try:
+        if ns.sub_command == 'decode':
+            decoder = Decoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
 
-        for filename in ns.filenames:
-            with open(filename, 'rb') as ins:
-                s = ins.read()
+            for filename in ns.filenames:
+                with open(filename, 'rb') as ins:
+                    s = ins.read()
 
-            bufr_message = decoder.process(s, file_path=filename, wire_template_data=False,
-                                           ignore_value_expectation=ns.ignore_value_expectation)
+                bufr_message = decoder.process(s, file_path=filename, wire_template_data=False,
+                                               ignore_value_expectation=ns.ignore_value_expectation)
 
-            if ns.attributed:
-                bufr_message.wire()
-                print(NestedTextRenderer().render(bufr_message))
-            elif ns.json:
-                print(FlatJsonRenderer().render(bufr_message))
-            else:
-                print(FlatTextRenderer().render(bufr_message))
-
-    elif ns.sub_command == 'info':
-        flat_text_render = FlatTextRenderer()
-        decoder = Decoder(definitions_dir=ns.definitions_directory,
-                          tables_root_dir=ns.tables_root_directory)
-
-        for filename in ns.filenames:
-            with open(filename, 'rb') as ins:
-                s = ins.read()
-                bufr_message = decoder.process(s, file_path=filename, info_only=True)
-
-            print(flat_text_render.render(bufr_message))
-            if ns.template:
-                table_group = get_table_group(
-                    tables_root_dir=ns.tables_root_directory,
-                    master_table_number=bufr_message.master_table_number.value,
-                    originating_centre=bufr_message.originating_centre.value,
-                    originating_subcentre=bufr_message.originating_subcentre.value,
-                    master_table_version=bufr_message.master_table_version.value,
-                    local_table_version=bufr_message.local_table_version.value,
-                    normalize=1
-                )
-                template = table_group.template_from_ids(*bufr_message.unexpanded_descriptors.value)
-                print(flat_text_render.render(template))
-
-    elif ns.sub_command == 'encode':
-        encoder = Encoder(definitions_dir=ns.definitions_directory,
-                          tables_root_dir=ns.tables_root_directory,
-                          compiled_template_cache_max=ns.compiled_template_cache_max)
-        if ns.json_filename != '-':
-            with open(ns.json_filename) as ins:
-                s = ins.read()
-        else:  # read from stdin, this is useful for piping
-            s = sys.stdin.read()
-        bufr_message = encoder.process(s, '<stdin>' if ns.json_filename else ns.json_filename,
-                                       wire_template_data=False)
-        if ns.output_filename:
-            with open(ns.output_filename, 'wb') as outs:
-                outs.write(bufr_message.serialized_bytes)
-
-    elif ns.sub_command in ('lookup', 'compile'):
-        table_group = get_table_group(ns.tables_root_directory,
-                                      ns.master_table_number,
-                                      ns.originating_centre,
-                                      ns.originating_subcentre,
-                                      ns.master_table_version,
-                                      ns.local_table_version)
-
-        if ns.sub_command == 'lookup':
-            flat_text_render = FlatTextRenderer()
-            table_group.B.load_code_and_flag()  # load the code and flag tables for additional details
-            descriptors = table_group.descriptors_from_ids(
-                *[d.strip() for d in ns.descriptors.split(',')]
-            )
-
-            for descriptor in descriptors:
-                if isinstance(descriptor, ElementDescriptor):
-                    print('{}, {}, {}, {}, {}'.format(flat_text_render.render(descriptor),
-                                                      descriptor.unit,
-                                                      descriptor.scale,
-                                                      descriptor.refval,
-                                                      descriptor.nbits))
-                    if ns.code_and_flag and descriptor.unit in (UNITS_FLAG_TABLE,
-                                                                UNITS_CODE_TABLE,
-                                                                UNITS_COMMON_CODE_TABLE_C1):
-                        code_and_flag = table_group.B.code_and_flag_for_descriptor(descriptor)
-                        if code_and_flag:
-                            for v, description in code_and_flag:
-                                output = u'{:8d} {}'.format(v, description)
-                                # With Python 2, some terminal utilities, e.g. more, redirect to file,
-                                # cause errors when unicode string is printed. The fix is to encode
-                                # them before print.
-                                if six.PY2:
-                                    output = output.encode('utf-8', 'ignore')
-                                print(output)
+                if ns.attributed:
+                    bufr_message.wire()
+                    print(NestedTextRenderer().render(bufr_message))
+                elif ns.json:
+                    print(FlatJsonRenderer().render(bufr_message))
                 else:
-                    print(flat_text_render.render(descriptor))
+                    print(FlatTextRenderer().render(bufr_message))
 
-        else:  # compile
-            from pybufrkit.templatecompiler import TemplateCompiler
-            template_compiler = TemplateCompiler()
-            descriptor_ids = [x.strip() for x in ns.descriptors.split(',')]
-            table_group = get_table_group(tables_root_dir=ns.tables_root_directory)
-            template = table_group.template_from_ids(*descriptor_ids)
-            compiled_template = template_compiler.process(template, table_group)
-            print(json.dumps(compiled_template.to_dict()))
+        elif ns.sub_command == 'info':
+            flat_text_render = FlatTextRenderer()
+            decoder = Decoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory)
 
-    else:
-        raise RuntimeError('Unknown sub-command: {}'.format(ns.sub_command))
+            for filename in ns.filenames:
+                with open(filename, 'rb') as ins:
+                    s = ins.read()
+                    bufr_message = decoder.process(s, file_path=filename, info_only=True)
+
+                print(flat_text_render.render(bufr_message))
+                if ns.template:
+                    table_group = get_table_group(
+                        tables_root_dir=ns.tables_root_directory,
+                        master_table_number=bufr_message.master_table_number.value,
+                        originating_centre=bufr_message.originating_centre.value,
+                        originating_subcentre=bufr_message.originating_subcentre.value,
+                        master_table_version=bufr_message.master_table_version.value,
+                        local_table_version=bufr_message.local_table_version.value,
+                        normalize=1
+                    )
+                    template = table_group.template_from_ids(*bufr_message.unexpanded_descriptors.value)
+                    print(flat_text_render.render(template))
+
+        elif ns.sub_command == 'encode':
+            encoder = Encoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
+            if ns.json_filename != '-':
+                with open(ns.json_filename) as ins:
+                    s = ins.read()
+            else:  # read from stdin, this is useful for piping
+                s = sys.stdin.read()
+            bufr_message = encoder.process(s, '<stdin>' if ns.json_filename else ns.json_filename,
+                                           wire_template_data=False)
+            if ns.output_filename:
+                with open(ns.output_filename, 'wb') as outs:
+                    outs.write(bufr_message.serialized_bytes)
+
+        elif ns.sub_command in ('lookup', 'compile'):
+            table_group = get_table_group(ns.tables_root_directory,
+                                          ns.master_table_number,
+                                          ns.originating_centre,
+                                          ns.originating_subcentre,
+                                          ns.master_table_version,
+                                          ns.local_table_version)
+
+            if ns.sub_command == 'lookup':
+                flat_text_render = FlatTextRenderer()
+                table_group.B.load_code_and_flag()  # load the code and flag tables for additional details
+                descriptors = table_group.descriptors_from_ids(
+                    *[d.strip() for d in ns.descriptors.split(',')]
+                )
+
+                for descriptor in descriptors:
+                    if isinstance(descriptor, ElementDescriptor):
+                        print('{}, {}, {}, {}, {}'.format(flat_text_render.render(descriptor),
+                                                          descriptor.unit,
+                                                          descriptor.scale,
+                                                          descriptor.refval,
+                                                          descriptor.nbits))
+                        if ns.code_and_flag and descriptor.unit in (UNITS_FLAG_TABLE,
+                                                                    UNITS_CODE_TABLE,
+                                                                    UNITS_COMMON_CODE_TABLE_C1):
+                            code_and_flag = table_group.B.code_and_flag_for_descriptor(descriptor)
+                            if code_and_flag:
+                                for v, description in code_and_flag:
+                                    output = u'{:8d} {}'.format(v, description)
+                                    # With Python 2, some terminal utilities, e.g. more, redirect to file,
+                                    # cause errors when unicode string is printed. The fix is to encode
+                                    # them before print.
+                                    if six.PY2:
+                                        output = output.encode('utf-8', 'ignore')
+                                    print(output)
+                    else:
+                        print(flat_text_render.render(descriptor))
+
+            else:  # compile
+                from pybufrkit.templatecompiler import TemplateCompiler
+                template_compiler = TemplateCompiler()
+                descriptor_ids = [x.strip() for x in ns.descriptors.split(',')]
+                table_group = get_table_group(tables_root_dir=ns.tables_root_directory)
+                template = table_group.template_from_ids(*descriptor_ids)
+                compiled_template = template_compiler.process(template, table_group)
+                print(json.dumps(compiled_template.to_dict()))
+
+        else:
+            print('Unknown sub-command: {}'.format(ns.sub_command))
+
+    except (UnknownDescriptor, BitReadError) as e:
+        print(e)
+
+    except IOError as e:
+        print('Error: {}: {}'.format(e.strerror, e.filename))
