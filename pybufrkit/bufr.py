@@ -16,6 +16,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 from pybufrkit.constants import BASE_DIR, NBITS_PER_BYTE, PARAMETER_TYPE_TEMPLATE_DATA
+from pybufrkit.tables import get_table_group
 
 log = logging.getLogger(__file__)
 
@@ -323,6 +324,29 @@ class BufrMessage(object):
         :param BufrSection section: The Bufr Section to add
         """
         self.sections.append(section)
+
+    def build_template(self, tables_root_dir, normalize=1):
+        """
+        Build the BufrTemplate object using the list of unexpanded descriptors
+        and corresponding table group.
+
+        :param tables_root_dir: The root directory to find BUFR tables
+        :param normalize: Whether to use some default table group if the specific
+            one is not available.
+        :return: A tuple of BufrTemplate and the associated TableGroup
+        """
+        table_group = get_table_group(
+            tables_root_dir=tables_root_dir,
+            master_table_number=self.master_table_number.value,
+            originating_centre=self.originating_centre.value,
+            originating_subcentre=self.originating_subcentre.value,
+            master_table_version=self.master_table_version.value,
+            local_table_version=self.local_table_version.value,
+            normalize=normalize
+        )
+        self.table_group_key = table_group.key
+
+        return table_group.template_from_ids(*self.unexpanded_descriptors.value), table_group
 
     def wire(self):
         """

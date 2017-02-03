@@ -13,7 +13,6 @@ import six
 
 from pybufrkit.constants import *
 from pybufrkit.bitops import get_bit_writer
-from pybufrkit.tables import get_table_group
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData
 from pybufrkit.descriptors import Descriptor
@@ -203,18 +202,8 @@ class Encoder(Coder):
         :return:
         """
         # TODO: Parametrise the "normalize" argument
-        table_group = get_table_group(
-            tables_root_dir=self.tables_root_dir,
-            master_table_number=bufr_message.master_table_number.value,
-            originating_centre=bufr_message.originating_centre.value,
-            originating_subcentre=bufr_message.originating_subcentre.value,
-            master_table_version=bufr_message.master_table_version.value,
-            local_table_version=bufr_message.local_table_version.value,
-            normalize=0
-        )
-        bufr_message.table_group_key = table_group.key
+        bufr_template, table_group = bufr_message.build_template(self.tables_root_dir, normalize=0)
 
-        bufr_template = table_group.template_from_ids(*bufr_message.unexpanded_descriptors.value)
         state = CoderState(bufr_message.is_compressed.value, bufr_message.n_subsets.value, section_parameter.value)
 
         if self.compiled_template_manager:

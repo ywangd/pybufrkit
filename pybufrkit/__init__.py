@@ -185,19 +185,12 @@ def main():
                     s = ins.read()
                     bufr_message = decoder.process(s, file_path=filename, info_only=True)
 
+                bufr_template, table_group = bufr_message.build_template(
+                    ns.tables_root_directory, normalize=1)
+
                 print(flat_text_render.render(bufr_message))
                 if ns.template:
-                    table_group = get_table_group(
-                        tables_root_dir=ns.tables_root_directory,
-                        master_table_number=bufr_message.master_table_number.value,
-                        originating_centre=bufr_message.originating_centre.value,
-                        originating_subcentre=bufr_message.originating_subcentre.value,
-                        master_table_version=bufr_message.master_table_version.value,
-                        local_table_version=bufr_message.local_table_version.value,
-                        normalize=1
-                    )
-                    template = table_group.template_from_ids(*bufr_message.unexpanded_descriptors.value)
-                    print(flat_text_render.render(template))
+                    print(flat_text_render.render(bufr_template))
 
         elif ns.sub_command == 'encode':
             encoder = Encoder(definitions_dir=ns.definitions_directory,
