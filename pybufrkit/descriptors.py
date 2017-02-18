@@ -286,7 +286,7 @@ class BufrTemplate(SequenceDescriptor):
         super(BufrTemplate, self).__init__(id_, name, members)
 
     def __str__(self):
-        return 'TEMPLATE'
+        return 'BufrTemplate'
 
     @property
     def original_descriptor_ids(self):

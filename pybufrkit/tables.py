@@ -54,7 +54,7 @@ MAXIMUM_NUMBER_OF_CACHED_TABLE_GROUPS = 50
 DEFAULT_MASTER_TABLE_NUMBER = 0
 DEFAULT_ORIGINATING_CENTRE = 0
 DEFAULT_ORIGINATING_SUBCENTRE = 0
-DEFAULT_MASTER_TABLE_VERSION = 25
+DEFAULT_MASTER_TABLE_VERSION = 27
 DEFAULT_LOCAL_TABLE_VERSION = 0
 
 
@@ -102,8 +102,10 @@ def normalize_tables_sn(tables_root_dir,
 
     # Ensure the master table number exists
     if not os.path.isdir(os.path.join(tables_root_dir, master_table_number_string)):
-        # TODO: issue warning as we are falling back to default master table number
-        master_table_number_string = '0'
+        log.warn('Fallback to default master table number: {} ({} not found)'.format(
+            DEFAULT_MASTER_TABLE_NUMBER, master_table_number_string
+        ))
+        master_table_number_string = str(DEFAULT_MASTER_TABLE_NUMBER)
 
     # Find out WMO tables to base from
     centres = '0_0'
@@ -114,7 +116,9 @@ def normalize_tables_sn(tables_root_dir,
                                   )):
         wmo_tables_sn = (master_table_number_string, centres, master_table_version_string)
     else:
-        # TODO: Issue warning as we are using default wmo tables
+        log.warn('Fallback to default master table version {} ({} not found)'.format(
+            DEFAULT_MASTER_TABLE_VERSION, master_table_version_string
+        ))
         wmo_tables_sn = (master_table_number_string, centres, str(DEFAULT_MASTER_TABLE_VERSION))
 
     # find out local tables if needed
@@ -130,11 +134,14 @@ def normalize_tables_sn(tables_root_dir,
                                           local_table_version_string)):
                 local_tables_sn = (master_table_number_string, centres, local_table_version_string)
                 if idx != 0:
-                    # TODO: issue warning as we are using default subcentre
-                    pass
+                    log.warn('Fallback to default local sub-centre {} ({} not found)'.format(
+                        DEFAULT_ORIGINATING_SUBCENTRE, originating_subcentre
+                    ))
                 break
         else:
-            # TODO: issue warning as no corresponding local table can be found
+            log.warn('Cannot find sub-centre {} nor valid default. Local table not in use.'.format(
+                originating_subcentre
+            ))
             local_tables_sn = None
 
     else:  # no local table is used

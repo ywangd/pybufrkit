@@ -23,3 +23,14 @@ class BitReadError(PyBufrKitError):
     """
     Bit reading error
     """
+
+
+class PathParsingError(PyBufrKitError):
+    """
+    Error on parsing the entity path
+    """
+
+class QueryError(PyBufrKitError):
+    """
+    General error on query processing
+    """

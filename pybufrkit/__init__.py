@@ -27,9 +27,9 @@ from pybufrkit.decoder import Decoder
 from pybufrkit.encoder import Encoder
 from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
-from pybufrkit.renderer import FlatTextRenderer, FlatJsonRenderer, NestedTextRenderer
+from pybufrkit.renderer import FlatTextRenderer, FlatJsonRenderer, NestedTextRenderer, NestedJsonRenderer
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -46,8 +46,11 @@ def main():
                     version='{}: {}'.format(__name__, __version__),
                     help="Show program's version number and exit")
 
-    ap.add_argument('--debug', action='store_true',
-                    help='Set logging level to DEBUG')
+    verbosity_group = ap.add_mutually_exclusive_group()
+    verbosity_group.add_argument('--info', action='store_true',
+                                 help='Show messages of severity level INFO or higher')
+    verbosity_group.add_argument('--debug', action='store_true',
+                                 help='Show messages of severity level DEBUG or higher')
 
     ap.add_argument('-d', '--definitions-directory',
                     help='The directory to locate definition files')
@@ -146,16 +149,44 @@ def main():
     compile_parser.add_argument('--local-table-version',
                                 help='The local table version')
 
+    query_parser = subparsers.add_parser('query', help='Query the data section of BUFR messages')
+    query_parser.add_argument('query_string',
+                              help='A query string')
+    query_parser.add_argument('filenames', metavar='filename',
+                              nargs='+',
+                              help='BUFR file to decode')
+    query_parser.add_argument('-j', '--json',
+                              action='store_true',
+                              help='Output as JSON')
+    query_parser.add_argument('-n', '--nested',
+                              action='store_true',
+                              help='Output as nested JSON')
+    query_parser.add_argument('--ignore-value-expectation',
+                              action='store_true',
+                              help='Do not validate value expectations, e.g. 7777 stop signature')
+    query_parser.add_argument('--compiled-template-cache-max',
+                              type=int,
+                              help='The maximum number of compiled templates to cache. '
+                                   'A value greater than 0 is needed to activate template compilation.')
+
     ns = ap.parse_args()
+
+    if ns.info:
+        logging_level = logging.INFO
+    elif ns.debug:
+        logging_level = logging.DEBUG
+    else:
+        logging_level = logging.WARN
 
     logging.basicConfig(
         stream=sys.stdout,
-        level=logging.DEBUG if ns.debug else logging.ERROR,
-        format='%(asctime)s: %(levelname)s: %(funcName)s: %(message)s'
+        level=logging_level,
+        # format='%(asctime)s: %(levelname)s: %(funcName)s: %(message)s'
+        format='%(levelname)s: %(message)s'
     )
 
     try:
-        if ns.sub_command == 'decode':
+        if ns.sub_command in ('decode', 'query'):
             decoder = Decoder(definitions_dir=ns.definitions_directory,
                               tables_root_dir=ns.tables_root_directory,
                               compiled_template_cache_max=ns.compiled_template_cache_max)
@@ -167,13 +198,28 @@ def main():
                 bufr_message = decoder.process(s, file_path=filename, wire_template_data=False,
                                                ignore_value_expectation=ns.ignore_value_expectation)
 
-                if ns.attributed:
-                    bufr_message.wire()
-                    print(NestedTextRenderer().render(bufr_message))
-                elif ns.json:
-                    print(FlatJsonRenderer().render(bufr_message))
+                if ns.sub_command == 'decode':
+                    if ns.attributed:
+                        bufr_message.wire()
+                        print(NestedTextRenderer().render(bufr_message))
+                    elif ns.json:
+                        print(FlatJsonRenderer().render(bufr_message))
+                    else:
+                        print(FlatTextRenderer().render(bufr_message))
+
                 else:
-                    print(FlatTextRenderer().render(bufr_message))
+                    bufr_message.wire()
+                    from pybufrkit.query import BasicNodePathParser, DataQuerent
+                    querent = DataQuerent(BasicNodePathParser())
+                    query_result = querent.query(bufr_message, ns.query_string)
+                    if ns.json:
+                        if ns.nested:
+                            print(NestedJsonRenderer().render(query_result))
+                        else:
+                            print(FlatJsonRenderer().render(query_result))
+                    else:
+                        print(filename)
+                        print(FlatTextRenderer().render(query_result))
 
         elif ns.sub_command == 'info':
             flat_text_render = FlatTextRenderer()
@@ -258,6 +304,9 @@ def main():
             print('Unknown sub-command: {}'.format(ns.sub_command))
 
     except (UnknownDescriptor, BitReadError) as e:
+        print(e)
+
+    except (PathParsingError, QueryError) as e:
         print(e)
 
     except IOError as e:

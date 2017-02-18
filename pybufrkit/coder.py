@@ -15,6 +15,7 @@ from collections import namedtuple
 from six.moves import range, zip
 
 from pybufrkit.constants import *
+from pybufrkit.errors import *
 from pybufrkit.bufr import SectionConfigurer
 from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor,
@@ -332,8 +333,8 @@ class Coder(object):
                 self.process_sequence_descriptor(state, bit_operator, member)
 
             else:
-                raise RuntimeError('Cannot compile descriptor {} of type: {}'.format(
-                    member.id, member_type))
+                raise UnknownDescriptor('Cannot process descriptor {} of type: {}'.format(
+                    member, member_type.__name__))
 
     def process_define_new_refval(self, state, bit_operator, descriptor):
         """

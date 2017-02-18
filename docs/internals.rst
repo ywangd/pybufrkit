@@ -122,6 +122,65 @@ is especially necessary when some operator descriptors, such as 204YYY
 236, 237), make some values as attributes to other values. The wiring process
 associates attributes to their owners so that their meanings are explicit.
 
+Query the Template Data
+^^^^^^^^^^^^^^^^^^^^^^^
+The following is a rough
+`EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
+for the query string::
+
+    <query_string> = [<subset_spec>] <path_spec>+
+    <subset_spec> = '@'<slice>
+    <path_spec> = <separator> <descriptor_id> [<slice>]
+    <separator> = '/' | '.' | '>'
+
+* The ``<slice>`` takes the same syntax as how Python list can be sliced,
+  e.g. ``[1]``, ``[-1]``, ``[:]``, ``[::10]``.
+
+* The ``<descriptor_id>`` is the 6-letter (always including leading zeros) descriptor ID,
+  e.g. ``001001``, ``301001``, ``A21062``.
+
+* The ``<separator>`` can be omitted and defaults to ``>`` if a query string begins
+  with a ``<path_spec>``.
+
+* Whitespaces are ignored.
+
+Here is a few examples of valid query strings:
+
+* ``008042`` - All instances of descriptor ``008042`` regardless of where it appears.
+  This form is equivalent to ``> 008042``.
+
+* ``@[0] > 008042`` - Similar to the above query but only against the first subset.
+
+* ``/008042`` - Only those that are root element of a BUFR Template
+
+* ``/008042[0]`` - Similar to the above query but retrieve only the first instance.
+  Note that the index does not account for the repetition of a descriptor in replication
+  blocks, i.e. the descriptor will only be counted once.
+
+* ``303051/008042`` - Only those that are direct children of ``303051``
+
+* ``103000.031001`` - The delayed replication factor value of replication ``103000``.
+  Note the separator between a delayed replication and its factor is a Dot.
+
+* ``021062.A21062`` - The associated field of descriptor ``021062``.
+
+The query is performed against the wired hierarchical Template Data, which is
+*expanded*, *enhanced* and *populated*. These are explained as the follows:
+
+* *Expanded* - The unexpanded descriptors are fully expanded. For an example, the
+  sequence descriptor ``301001`` is expanded to contain two child descriptors,
+  ``001001`` and ``001002``. The hierarchical structure is also kept so that
+  the child descriptor can be accurately specified using the Slash (``/``) separator.
+
+* *Enhanced* - Associated fields, first order stats, bitmapped descriptors are
+  wired as attributes to their owner descriptors. The attributes relationship
+  can be queried using the Dot (``.``) separator.
+
+* *Populated* - The Template is populated with actual data from the Data section.
+  If a descriptor is not populated, it cannot be queried (an error will be thrown).
+  For an example, if a delayed replication block has Zero replication, none of
+  its descendant descriptors could be queried.
+
 Renderer
 ^^^^^^^^
 This component is responsible for rendering the processed BUFR message object

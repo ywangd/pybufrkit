@@ -30,6 +30,9 @@ API reference
 .. automodule:: pybufrkit.templatedata
     :members:
 
+.. automodule:: pybufrkit.query
+    :members:
+
 .. automodule:: pybufrkit.renderer
     :members:
 

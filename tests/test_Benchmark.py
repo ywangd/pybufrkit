@@ -2,9 +2,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import sys
+import logging
 import unittest
 
 from pybufrkit.decoder import Decoder
+
+logging.basicConfig(stream=sys.stdout,
+                    format="%(levelname)s: %(funcName)s: %(message)s")
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'benchmark_data')

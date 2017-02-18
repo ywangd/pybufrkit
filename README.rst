@@ -6,9 +6,11 @@ to work with WMO BUFR (FM-94) messages. It can be used as both a
 command line tool or library to decode and encode BUFR messages. Here is a brief
 list of some of the features:
 
+* Pure Python
 * Handles both compressed and un-compressed messages
 * Handles all practical operator descriptors, including data quality info,
   stats, bitmaps, etc.
+* Comprehensive query support for the data section
 * Tested with the same set of BUFR files used by
   `ecCodes <https://software.ecmwf.int/wiki/display/ECC/ecCodes+Home>`_
   and `BUFRDC <https://software.ecmwf.int/wiki/display/BUFR/BUFRDC+Home>`_.
@@ -17,7 +19,7 @@ Find more documentation at http://pybufrkit.readthedocs.io/
 
 Installation
 ------------
-PyBufrKit is compatible with both Python 2.6+ and 3.5+. To install from PyPi::
+PyBufrKit is compatible with both Python 2.7+ and 3.5+. To install from PyPi::
 
     pip install pybufrkit
 
@@ -50,7 +52,6 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 * Decode a BUFR file and display it as a hierarchical structure corresponding to
   the BUFR Descriptors. In addition, the attribute descriptors are associated to
   their (bitmap) corresponding descriptors.
-
     ``pybufrkit decode -a BUFR_FILE``
 
 * Decode a BUFR file and convert to JSON format (the JSON can be encoded back to the BUFR format)
@@ -59,11 +60,26 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 * Encode a JSON file to BUFR
     ``pybufrkit encode JSON_FILE BUFR_FILE``
 
-* Decoded a BUFR file to JSON, pipe it to the encoder to encode it back to BUFR
+* Decode a BUFR file to JSON, pipe it to the encoder to encode it back to BUFR
     ``pybufrkit decode -j BUFR_FILE | pybufrkit encode -``
 
 * Decode only the metadata sections of a BUFR file
     ``pybufrkit info BUFR_FILE``
+
+* Query all values for descriptor 001002
+    ``pybufrkit query 001002 BUFR_FILE``
+
+* Query for those root level 001002 of the BUFR Template
+    ``pybufrkit query /001002 BUFR_FILE``
+
+* Query for 001002 that is a direct child of 301001
+    ``pybufrkit query /301001/001002 BUFR_FILE``
+
+* Query for all 001002 of the first subset
+    ``pybufrkit query '@[0] > 001002' BUFR_FILE``
+
+* Query for associated field of 021062
+    ``pybufrkit query 021062.A21062 BUFR_FILE``
 
 * Lookup information for a Element Descriptor (along with its code table)
     ``pybufrkit lookup -l 020003``
@@ -74,7 +90,7 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 Library Usage
 -------------
 
-The followings are some basic library usage::
+The following code shows an example of basic library usage::
 
     # Decode a BUFR file
     from pybufrkit.decoder import Decoder
@@ -93,4 +109,7 @@ The followings are some basic library usage::
     with open(BUFR_OUTPUT_FILE, 'wb') as outs:
         outs.write(bufr_message_new.serialized_bytes)
 
+    # Query the data
+    from pybufrkit.query import NodePathParser, DataQuerent
+    query_result = DataQuerent(NodePathParser()).query(bufr_message, '001002')
 

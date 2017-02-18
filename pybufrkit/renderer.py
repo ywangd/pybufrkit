@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import abc
 import json
+from collections import OrderedDict
 
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
@@ -19,8 +20,9 @@ from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicati
                                    DelayedReplicationDescriptor, OperatorDescriptor,
                                    SequenceDescriptor, SkippedLocalDescriptor,
                                    AssociatedDescriptor, MarkerDescriptor)
-from pybufrkit.templatedata import (TemplateData, NoValueNode, SequenceNode,
+from pybufrkit.templatedata import (TemplateData, NoValueDataNode, SequenceNode,
                                     FixedReplicationNode, DelayedReplicationNode)
+from pybufrkit.query import QueryResult
 
 
 class Renderer(object):
@@ -28,6 +30,7 @@ class Renderer(object):
     This class is the abstract base Renderer. A renderer provides the contract
     to take in an object and convert it into a string representation.
     """
+
     def render(self, obj):
         """
         Render the given object as string.
@@ -42,6 +45,8 @@ class Renderer(object):
             return self._render_template_data(obj)
         elif isinstance(obj, Descriptor):
             return self._render_descriptor(obj)
+        elif isinstance(obj, QueryResult):
+            return self._render_query_result(obj)
         else:
             raise RuntimeError('Unknown object {} for rendering'.format(type(obj)))
 
@@ -57,11 +62,16 @@ class Renderer(object):
     def _render_descriptor(self, descriptor):
         """Render a Descriptor (including all of its subclasses)"""
 
+    @abc.abstractmethod
+    def _render_query_result(self, query_result):
+        """Render a QueryResult object"""
+
 
 class FlatTextRenderer(Renderer):
     """
     This renderer converts the given object by flatten all its sub-structures.
     """
+
     def _render_bufr_message(self, bufr_message):
         ret = [str(bufr_message.table_group_key)]
         for section in bufr_message.sections:
@@ -109,6 +119,14 @@ class FlatTextRenderer(Renderer):
         lines = self._render_descriptor_helper(descriptor, '')
         return '\n'.join(lines)
 
+    def _render_query_result(self, query_result):
+        lines = []
+        for idx_subset in query_result.subset_indices():
+            values = query_result.get_values(idx_subset, flat=True)
+            lines.append('###### subset {} of {} ######'.format(idx_subset + 1, query_result.n_subsets))
+            lines.append(','.join('{!r}'.format(v) for v in values))
+        return '\n'.join(lines)
+
     def _render_descriptor_helper(self, descriptor, indent):
         lines = []
 
@@ -154,6 +172,7 @@ class FlatJsonRenderer(Renderer):
     This renderer converts the given object to a JSON string by flatten its
     internal structure.
     """
+
     def _render_bufr_message(self, bufr_message):
         """
         Produce a JSON string for the BUFR message that can be encoded back to
@@ -172,10 +191,24 @@ class FlatJsonRenderer(Renderer):
         return json.dumps(data, encoding='latin-1')
 
     def _render_template_data(self, template_data):
-        return json.dumps(template_data.decoded_values_all_subsets)
+        return json.dumps(template_data.decoded_values_all_subsets, encoding='latin-1')
 
     def _render_descriptor(self, descriptor):
         raise NotImplementedError()
+
+    def _render_query_result(self, query_result):
+        ret = OrderedDict()
+        for idx_subset in query_result.subset_indices():
+            ret[idx_subset] = query_result.get_values(idx_subset, flat=True)
+        return json.dumps(ret, encoding='latin-1')
+
+
+class NestedJsonRenderer(Renderer):
+    def _render_query_result(self, query_result):
+        ret = OrderedDict()
+        for idx_subset in query_result.subset_indices():
+            ret[idx_subset] = query_result.get_values(idx_subset)
+        return json.dumps(ret, encoding='latin-1')
 
 
 class NestedTextRenderer(Renderer):
@@ -183,6 +216,7 @@ class NestedTextRenderer(Renderer):
     This renderer converts the given object to a text string by honoring all its
     nested sub-structures.
     """
+
     def _render_bufr_message(self, bufr_message):
         """
         Render the template data in a hierarchical format for the BUFR message.
@@ -223,7 +257,7 @@ class NestedTextRenderer(Renderer):
     def _render_template_data_nodes(self, decoded_nodes, decoded_descriptors, decoded_values, indent):
         ret = []
         for decoded_node in decoded_nodes:
-            if isinstance(decoded_node, NoValueNode):
+            if isinstance(decoded_node, NoValueDataNode):
                 ret.append('{}{}'.format(indent, decoded_node))
 
                 if isinstance(decoded_node, SequenceNode):
@@ -281,7 +315,7 @@ class NestedTextRenderer(Renderer):
         elif hasattr(descriptor, 'name'):
             description = descriptor.name
         else:
-            description = decoded_node.__class__.__name__[:-4]
+            description = decoded_node.__class__.__name__[:-8]
 
         ret = [
             '{}{}{} {} {!r}'.format(

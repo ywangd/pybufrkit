@@ -11,7 +11,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import itertools
-import weakref
 import functools
 
 # noinspection PyUnresolvedReferences
@@ -24,12 +23,10 @@ from pybufrkit.descriptors import (ElementDescriptor, FixedReplicationDescriptor
                                    MarkerDescriptor)
 
 
-# A node contains information that can be used to locate a descriptor with its associated values.
-class NoValueNode(object):
+class DataNode(object):
     """
-    A no value node is for any descriptors that cannot have a value, e.g.
-    replication descriptors, sequence descriptors and some operator descriptors,
-    e.g. 201YYY.
+    A node is composed of a descriptor and its value (if exists) and any
+    possible child or attribute nodes.
     """
 
     def __init__(self, descriptor):
@@ -45,26 +42,38 @@ class NoValueNode(object):
         return str(self.descriptor)
 
 
-class FixedReplicationNode(NoValueNode):
+# A node contains information that can be used to locate a descriptor with its associated values.
+class NoValueDataNode(DataNode):
+    """
+    A no value node is for any descriptors that cannot have a value, e.g.
+    replication descriptors, sequence descriptors and some operator descriptors,
+    e.g. 201YYY.
+    """
+
+    def __init__(self, descriptor):
+        super(NoValueDataNode, self).__init__(descriptor)
+
+
+class FixedReplicationNode(NoValueDataNode):
     def __init__(self, descriptor):
         super(FixedReplicationNode, self).__init__(descriptor)
         self.members = []
 
 
-class DelayedReplicationNode(NoValueNode):
+class DelayedReplicationNode(NoValueDataNode):
     def __init__(self, descriptor):
         super(DelayedReplicationNode, self).__init__(descriptor)
         self.members = []
         self.factor = None
 
 
-class SequenceNode(NoValueNode):
+class SequenceNode(NoValueDataNode):
     def __init__(self, descriptor):
         super(SequenceNode, self).__init__(descriptor)
         self.members = []
 
 
-class ValueNode(object):
+class ValueDataNode(DataNode):
     """
     A value node is for any descriptors that can have a value attached to it.
     This includes all Element descriptor, Associated descriptor, Skipped local
@@ -74,7 +83,8 @@ class ValueNode(object):
                       descriptor and its associated value.
     """
 
-    def __init__(self, index):
+    def __init__(self, descriptor, index):
+        super(ValueDataNode, self).__init__(descriptor)
         self.index = index
         self.attributes = []
 
@@ -86,27 +96,27 @@ class ValueNode(object):
 
 
 # The following types of Node can be attributes
-class AssociatedFieldNode(ValueNode):
+class AssociatedFieldNode(ValueDataNode):
     pass
 
 
-class FirstOrderStatsNode(ValueNode):
+class FirstOrderStatsNode(ValueDataNode):
     pass
 
 
-class DifferenceStatsNode(ValueNode):
+class DifferenceStatsNode(ValueDataNode):
     pass
 
 
-class SubstitutionNode(ValueNode):
+class SubstitutionNode(ValueDataNode):
     pass
 
 
-class ReplacementNode(ValueNode):
+class ReplacementNode(ValueDataNode):
     pass
 
 
-class QualityInfoNode(ValueNode):
+class QualityInfoNode(ValueDataNode):
     pass
 
 
@@ -161,6 +171,7 @@ class TemplateData(object):
         else:
             self._is_wired = True
 
+        # For compressed data, the wiring is the same for all subsets.
         n_subsets = 1 if self.is_compressed else self.n_subsets
 
         for idx_subset in range(n_subsets):
@@ -172,7 +183,7 @@ class TemplateData(object):
             # The index is used to index into the decoded descriptors/values.
             # The is used to have links between flat indices and nested nodes,
             # so that attributes can be associated to their bit-mapped nodes.
-            self.index_to_node = weakref.WeakValueDictionary()
+            self.index_to_node = {}
             self.next_index = functools.partial(next, itertools.count())
             self.nbits_associated_list = []  # 204 YYY
             self.data_not_present_count = 0  # 221
@@ -182,35 +193,42 @@ class TemplateData(object):
 
             self.wire_members(self.template.members)
 
+            # release memory
+            del self.index_to_node
+
+    def get_next_descriptor_and_index(self):
+        index = self.next_index()
+        return self.decoded_descriptors[index], index
+
     def add_node(self, node):
         self.decoded_nodes.append(node)
-        if not isinstance(node, NoValueNode):
+        if not isinstance(node, NoValueDataNode):
             self.index_to_node[node.index] = node
         return node
 
     def add_value_node(self):
-        node = ValueNode(self.next_index())
+        node = ValueDataNode(*self.get_next_descriptor_and_index())
         self.decoded_nodes.append(node)
         self.index_to_node[node.index] = node
         return node
 
     def add_delayed_replication_factor_node(self):
-        factor_node = ValueNode(self.next_index())
+        factor_node = ValueDataNode(*self.get_next_descriptor_and_index())
         self.index_to_node[factor_node.index] = factor_node
         return factor_node
 
     def wire_element_descriptor(self, descriptor):
         # Read associated field if exists
         if self.nbits_associated_list and descriptor.X != 31:
-            assoc_node = AssociatedFieldNode(self.next_index())
+            assoc_node = AssociatedFieldNode(*self.get_next_descriptor_and_index())
             assoc_node.add_attribute(self.associated_field_meaning)
-            node = ValueNode(self.next_index())
+            node = ValueDataNode(*self.get_next_descriptor_and_index())
             node.add_attribute(assoc_node)
             self.add_node(node)
 
         else:
             if descriptor.X == 33 and self.waiting_for_qa_info_meaning:
-                node = self.add_node(QualityInfoNode(self.next_index()))
+                node = self.add_node(QualityInfoNode(*self.get_next_descriptor_and_index()))
                 self.index_to_node[self.bitmap_links[node.index]].add_attribute(node)
 
             else:
@@ -279,14 +297,14 @@ class TemplateData(object):
 
         if operator_code in (201, 202, 203, 206, 207, 208,):
             # nbits offset, scale offset, new refval, skip local, increment, change string length
-            self.add_node(NoValueNode(descriptor))
+            self.add_node(NoValueDataNode(descriptor))
 
         elif operator_code == 204:  # associated field
             if operand_value == 0:
                 self.nbits_associated_list.pop()
             else:
                 self.nbits_associated_list.append(operand_value)
-            self.add_node(NoValueNode(descriptor))
+            self.add_node(NoValueDataNode(descriptor))
 
         elif operator_code == 205:  # read string of YYY bytes
             self.add_value_node()
@@ -294,7 +312,7 @@ class TemplateData(object):
         # Data not present for following YYY descriptors except class 0-9 and 31
         elif operator_code == 221:
             self.data_not_present_count = operand_value
-            self.add_node(NoValueNode(descriptor))
+            self.add_node(NoValueDataNode(descriptor))
 
         elif operator_code == 222:  # quality info follows
             self.waiting_for_qa_info_meaning = True
@@ -305,7 +323,7 @@ class TemplateData(object):
             if operand_value == 0:
                 self.add_value_node()
             else:
-                node = self.add_node(SubstitutionNode(self.next_index()))
+                node = self.add_node(SubstitutionNode(*self.get_next_descriptor_and_index()))
                 self.wire_bitmap_attribute(node)
 
         elif operator_code == 224:  # 1st order stats
@@ -314,7 +332,7 @@ class TemplateData(object):
                 self.waiting_for_1st_order_stats_meaning = True
                 self.add_value_node()
             else:
-                node = self.add_node(FirstOrderStatsNode(self.next_index()))
+                node = self.add_node(FirstOrderStatsNode(*self.get_next_descriptor_and_index()))
                 node.add_attribute(self.first_order_stats_meaning)
                 self.wire_bitmap_attribute(node)
 
@@ -324,7 +342,7 @@ class TemplateData(object):
                 self.waiting_for_difference_stats_meaning = True
                 self.add_value_node()
             else:
-                node = self.add_node(DifferenceStatsNode(self.next_index()))
+                node = self.add_node(DifferenceStatsNode(*self.get_next_descriptor_and_index()))
                 node.add_attribute(self.difference_stats_meaning)
                 self.wire_bitmap_attribute(node)
 
@@ -333,12 +351,12 @@ class TemplateData(object):
             if operand_value == 0:
                 self.add_value_node()
             else:
-                node = self.add_node(ReplacementNode(self.next_index()))
+                node = self.add_node(ReplacementNode(*self.get_next_descriptor_and_index()))
                 self.wire_bitmap_attribute(node)
 
         elif operator_code == 235:  # cancel all backwards data reference
             self.waiting_for_qa_info_meaning = False
-            self.add_node(NoValueNode(descriptor))
+            self.add_node(NoValueDataNode(descriptor))
 
         elif operator_code == 236:
             self.add_value_node()
@@ -361,7 +379,7 @@ class TemplateData(object):
                 if isinstance(member, ElementDescriptor):
                     X = member.X
                     if not (1 <= X <= 9 or X == 31):  # skipping
-                        self.add_node(NoValueNode(member))
+                        self.add_node(NoValueDataNode(member))
                         continue
 
             # Now process normally
