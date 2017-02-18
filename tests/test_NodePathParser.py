@@ -5,7 +5,7 @@ import os
 import unittest
 
 from pybufrkit.query import BasicNodePathParser
-from pybufrkit.errors import PathParsingError
+from pybufrkit.errors import PathExprParsingError
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -71,30 +71,35 @@ class NodePathParserTests(unittest.TestCase):
         assert p11.components[1] == ('/', '302004', slice_all)
         assert p11.components[2] == ('>', '020012', slice_all)
 
-    def test_error(self):
-        with self.assertRaises(PathParsingError):
+    def test_errors(self):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('/')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('@/')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('/[0]')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('/001001[]')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('/001001[a]')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('/001001[:::]')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('@[:].001001')
 
-        with self.assertRaises(PathParsingError):
+        with self.assertRaises(PathExprParsingError):
             self.parser.parse('.001001')
+
+        with self.assertRaises(PathExprParsingError):
+            self.parser.parse('section_length')
+
+

@@ -3,12 +3,15 @@ pybufrkit.query
 ~~~~~~~~~~~~~~~
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
+
 import abc
 import logging
 import string
 from collections import namedtuple, OrderedDict
 
-from pybufrkit.errors import PathParsingError, QueryError
+from pybufrkit.errors import PathExprParsingError, QueryError
 from pybufrkit.templatedata import (
     ValueDataNode,
     FixedReplicationNode, DelayedReplicationNode, SequenceNode
@@ -53,7 +56,7 @@ class NodePath(object):
 
 
 def unexpected_char_error(c, idx):
-    return PathParsingError('unexpected char: {!r} at position {}'.format(c, idx))
+    return PathExprParsingError('unexpected char: {!r} at position {}'.format(c, idx))
 
 
 PATH_SEPARATOR_CHILD = '/'
@@ -92,8 +95,15 @@ class BasicNodePathParser(NodePathParser):
         self.current_slice_elements = []
 
     def parse(self, path_expr):
-        if path_expr.strip() == '':
-            raise PathParsingError('Empty path expression')
+        path_expr_stripped = path_expr.strip()
+
+        if path_expr_stripped == '':
+            raise PathExprParsingError('Empty path expression')
+
+        # A path expression should always start with one of the following chars
+        # Otherwise fail fast.
+        if path_expr_stripped[0] not in '@/>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+            raise unexpected_char_error(path_expr_stripped[0], path_expr.find(path_expr_stripped[0]))
 
         self.reset()
         self.node_path = NodePath(path_expr)
@@ -216,11 +226,11 @@ class BasicNodePathParser(NodePathParser):
             self.current_token = ''
             return ret
         except ValueError:
-            raise PathParsingError('invalid slice syntax: {!r} at position {}'.format(self.current_token, self.pos))
+            raise PathExprParsingError('invalid slice syntax: {!r} at position {}'.format(self.current_token, self.pos))
 
     def convert_id(self, ):
         if self.current_token == '':
-            raise PathParsingError('empty ID at position {}'.format(self.pos))
+            raise PathExprParsingError('empty ID at position {}'.format(self.pos))
 
         token, self.current_token = self.current_token, ''
         return token
@@ -240,7 +250,7 @@ class BasicNodePathParser(NodePathParser):
         elif len(self.current_slice_elements) <= 3:  # 2 or 3
             slc_obj = slice(*self.current_slice_elements)
         else:
-            raise PathParsingError('slice can have at most three indices')
+            raise PathExprParsingError('slice can have at most three indices')
 
         self.current_slice_elements = []
         return slc_obj

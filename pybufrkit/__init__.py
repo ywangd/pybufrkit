@@ -186,7 +186,7 @@ def main():
     )
 
     try:
-        if ns.sub_command in ('decode', 'query'):
+        if ns.sub_command == 'decode':
             decoder = Decoder(definitions_dir=ns.definitions_directory,
                               tables_root_dir=ns.tables_root_directory,
                               compiled_template_cache_max=ns.compiled_template_cache_max)
@@ -198,28 +198,13 @@ def main():
                 bufr_message = decoder.process(s, file_path=filename, wire_template_data=False,
                                                ignore_value_expectation=ns.ignore_value_expectation)
 
-                if ns.sub_command == 'decode':
-                    if ns.attributed:
-                        bufr_message.wire()
-                        print(NestedTextRenderer().render(bufr_message))
-                    elif ns.json:
-                        print(FlatJsonRenderer().render(bufr_message))
-                    else:
-                        print(FlatTextRenderer().render(bufr_message))
-
-                else:
+                if ns.attributed:
                     bufr_message.wire()
-                    from pybufrkit.query import BasicNodePathParser, DataQuerent
-                    querent = DataQuerent(BasicNodePathParser())
-                    query_result = querent.query(bufr_message, ns.query_string)
-                    if ns.json:
-                        if ns.nested:
-                            print(NestedJsonRenderer().render(query_result))
-                        else:
-                            print(FlatJsonRenderer().render(query_result))
-                    else:
-                        print(filename)
-                        print(FlatTextRenderer().render(query_result))
+                    print(NestedTextRenderer().render(bufr_message))
+                elif ns.json:
+                    print(FlatJsonRenderer().render(bufr_message))
+                else:
+                    print(FlatTextRenderer().render(bufr_message))
 
         elif ns.sub_command == 'info':
             flat_text_render = FlatTextRenderer()
@@ -300,13 +285,45 @@ def main():
                 compiled_template = template_compiler.process(template, table_group)
                 print(json.dumps(compiled_template.to_dict()))
 
+        elif ns.sub_command == 'query':
+            decoder = Decoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
+
+            for filename in ns.filenames:
+                with open(filename, 'rb') as ins:
+                    s = ins.read()
+
+                if ns.query_string.strip()[0] == '$':
+                    bufr_message = decoder.process(s, file_path=filename, info_only=True)
+                    from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent
+                    querent = MetadataQuerent(MetadataExprParser())
+                    value = querent.query(bufr_message, ns.query_string)
+                    print(filename)
+                    print(value)
+
+                else:
+                    bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
+                                                   ignore_value_expectation=ns.ignore_value_expectation)
+                    from pybufrkit.query import BasicNodePathParser, DataQuerent
+                    querent = DataQuerent(BasicNodePathParser())
+                    query_result = querent.query(bufr_message, ns.query_string)
+                    if ns.json:
+                        if ns.nested:
+                            print(NestedJsonRenderer().render(query_result))
+                        else:
+                            print(FlatJsonRenderer().render(query_result))
+                    else:
+                        print(filename)
+                        print(FlatTextRenderer().render(query_result))
+
         else:
             print('Unknown sub-command: {}'.format(ns.sub_command))
 
     except (UnknownDescriptor, BitReadError) as e:
         print(e)
 
-    except (PathParsingError, QueryError) as e:
+    except (PathExprParsingError, QueryError) as e:
         print(e)
 
     except IOError as e:

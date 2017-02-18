@@ -25,10 +25,17 @@ class BitReadError(PyBufrKitError):
     """
 
 
-class PathParsingError(PyBufrKitError):
+class PathExprParsingError(PyBufrKitError):
     """
-    Error on parsing the entity path
+    Error on parsing a Path expression
     """
+
+
+class MetadataExprParsingError(PyBufrKitError):
+    """
+    Error on parsing a metadata variable expression
+    """
+
 
 class QueryError(PyBufrKitError):
     """
