@@ -22,7 +22,7 @@ from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicati
                                    AssociatedDescriptor, MarkerDescriptor)
 from pybufrkit.templatedata import (TemplateData, NoValueDataNode, SequenceNode,
                                     FixedReplicationNode, DelayedReplicationNode)
-from pybufrkit.query import QueryResult
+from pybufrkit.dataquery import QueryResult
 
 
 class Renderer(object):

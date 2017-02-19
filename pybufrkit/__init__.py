@@ -149,7 +149,7 @@ def main():
     compile_parser.add_argument('--local-table-version',
                                 help='The local table version')
 
-    query_parser = subparsers.add_parser('query', help='Query the data section of BUFR messages')
+    query_parser = subparsers.add_parser('query', help='Query metadata and data of BUFR messages')
     query_parser.add_argument('query_string',
                               help='A query string')
     query_parser.add_argument('filenames', metavar='filename',
@@ -168,6 +168,24 @@ def main():
                               type=int,
                               help='The maximum number of compiled templates to cache. '
                                    'A value greater than 0 is needed to activate template compilation.')
+
+    script_parser = subparsers.add_parser('script', help='Run script against BUFR messages')
+    script_parser.add_argument('script', nargs='?',
+                               help='A script string or filename to load the script')
+    script_parser.add_argument('filenames', metavar='filename',
+                               nargs='+',
+                               help='BUFR file to decode')
+    script_parser.add_argument('-f', '--script-file', help='load script from file')
+    script_parser.add_argument('-F', '--data-values-flatten-level',
+                               type=int,
+                               help='The flatten level for data values')
+    script_parser.add_argument('--ignore-value-expectation',
+                               action='store_true',
+                               help='Do not validate value expectations, e.g. 7777 stop signature')
+    script_parser.add_argument('--compiled-template-cache-max',
+                               type=int,
+                               help='The maximum number of compiled templates to cache. '
+                                    'A value greater than 0 is needed to activate template compilation.')
 
     ns = ap.parse_args()
 
@@ -294,7 +312,7 @@ def main():
                 with open(filename, 'rb') as ins:
                     s = ins.read()
 
-                if ns.query_string.strip()[0] == '$':
+                if ns.query_string.strip()[0] == '%':
                     bufr_message = decoder.process(s, file_path=filename, info_only=True)
                     from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent
                     querent = MetadataQuerent(MetadataExprParser())
@@ -305,7 +323,7 @@ def main():
                 else:
                     bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
                                                    ignore_value_expectation=ns.ignore_value_expectation)
-                    from pybufrkit.query import BasicNodePathParser, DataQuerent
+                    from pybufrkit.dataquery import BasicNodePathParser, DataQuerent
                     querent = DataQuerent(BasicNodePathParser())
                     query_result = querent.query(bufr_message, ns.query_string)
                     if ns.json:
@@ -316,6 +334,35 @@ def main():
                     else:
                         print(filename)
                         print(FlatTextRenderer().render(query_result))
+
+        elif ns.sub_command == 'script':
+            from pybufrkit.script import ScriptRunner
+
+            if ns.script_file:
+                with open(ns.script) as ins:
+                    script_string = ins.read()
+            else:
+                if ns.script == '-':
+                    script_string = sys.stdin.read()
+                else:
+                    script_string = ns.script
+
+            script_runner = ScriptRunner(script_string,
+                                         data_values_flatten_level=ns.data_values_flatten_level)
+
+            decoder = Decoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
+
+            for filename in ns.filenames:
+                with open(filename, 'rb') as ins:
+                    s = ins.read()
+
+                bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
+                                               ignore_value_expectation=ns.ignore_value_expectation,
+                                               info_only=script_runner.metadata_only)
+
+                script_runner.run(bufr_message)
 
         else:
             print('Unknown sub-command: {}'.format(ns.sub_command))

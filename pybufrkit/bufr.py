@@ -307,7 +307,8 @@ class BufrMessage(object):
     does not need to know about other sections, and free to change if needed.
     """
 
-    def __init__(self):
+    def __init__(self, filename=''):
+        self.filename = filename
         self.sections = []
         self.serialized_bytes = None
         self.table_group_key = None

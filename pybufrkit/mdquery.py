@@ -9,9 +9,11 @@ import logging
 
 from pybufrkit.errors import MetadataExprParsingError
 
-__all__ = ['MetadataExprParser', 'MetadataQuerent']
+__all__ = ['MetadataExprParser', 'MetadataQuerent', 'METADATA_QUERY_INDICATOR_CHAR']
 
 log = logging.getLogger(__file__)
+
+METADATA_QUERY_INDICATOR_CHAR = '%'
 
 
 class MetadataExprParser(object):
@@ -23,8 +25,8 @@ class MetadataExprParser(object):
         :rtype: (int, str)
         """
         metadata_expr = metadata_expr.strip()
-        if metadata_expr[0] != '$':
-            raise MetadataExprParsingError('Metadata expression must start with "$"')
+        if metadata_expr[0] != METADATA_QUERY_INDICATOR_CHAR:
+            raise MetadataExprParsingError('Metadata expression must start with "%"')
 
         if '.' in metadata_expr:
             section_index, metadata_name = metadata_expr[1:].split('.')

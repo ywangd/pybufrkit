@@ -8,7 +8,7 @@ import unittest
 from six.moves import range
 
 from pybufrkit.decoder import Decoder
-from pybufrkit.query import BasicNodePathParser, DataQuerent
+from pybufrkit.dataquery import BasicNodePathParser, DataQuerent
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')

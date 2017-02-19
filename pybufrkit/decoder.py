@@ -69,7 +69,7 @@ class Decoder(Coder):
         s = s[idx:]
 
         bit_reader = get_bit_reader(s)
-        bufr_message = BufrMessage()
+        bufr_message = BufrMessage(file_path)
 
         configuration_transformers = (self.section_configurer.info_configuration,) if info_only else ()
         if ignore_value_expectation:

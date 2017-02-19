@@ -24,27 +24,27 @@ decoder = Decoder()
 def test_simple_query():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$length') == 5004
-    assert md_querent.query(bufr_message, '$edition') == 3
+    assert md_querent.query(bufr_message, '%length') == 5004
+    assert md_querent.query(bufr_message, '%edition') == 3
 
 
 def test_default_is_first_match():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$section_length') == 18
+    assert md_querent.query(bufr_message, '%section_length') == 18
 
 
 def test_explicit_section_index():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$3.section_length') == 154
-    assert md_querent.query(bufr_message, '$4.section_length') == 4768
+    assert md_querent.query(bufr_message, '%3.section_length') == 154
+    assert md_querent.query(bufr_message, '%4.section_length') == 4768
 
 
 def test_unexpanded_descriptors():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$unexpanded_descriptors') == [
+    assert md_querent.query(bufr_message, '%unexpanded_descriptors') == [
         1007, 25060, 1033, 2048, 2048, 5040, 201134,
         7001, 201000, 202131, 7005, 202000, 301011,
         301012, 4007, 5001, 6001, 8029, 8074, 8012,
@@ -62,18 +62,18 @@ def test_unexpanded_descriptors():
 def test_stripping_whites():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '   $length  ') == 5004
+    assert md_querent.query(bufr_message, '   %length  ') == 5004
 
 def test_non_exist_metadata():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$blahblah') is None
+    assert md_querent.query(bufr_message, '%blahblah') is None
 
 
 def test_non_exist_section():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    assert md_querent.query(bufr_message, '$9.length') is None
+    assert md_querent.query(bufr_message, '%9.length') is None
 
 
 def test_error_no_leading_dollar_sign():
@@ -83,4 +83,4 @@ def test_error_no_leading_dollar_sign():
 
 def test_error_invalid_section_index():
     with pytest.raises(MetadataExprParsingError):
-        metadata_expr_parser.parse('$a.length')
+        metadata_expr_parser.parse('%a.length')
