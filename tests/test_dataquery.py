@@ -8,7 +8,7 @@ import unittest
 from six.moves import range
 
 from pybufrkit.decoder import Decoder
-from pybufrkit.dataquery import BasicNodePathParser, DataQuerent
+from pybufrkit.dataquery import NodePathParser, DataQuerent
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -23,7 +23,7 @@ def read_bufr_file(file_name):
 class DecoderTests(unittest.TestCase):
     def setUp(self):
         self.decoder = Decoder()
-        self.querent = DataQuerent(BasicNodePathParser())
+        self.querent = DataQuerent(NodePathParser())
 
     def test_query_jaso_214(self):
         s = read_bufr_file('jaso_214.bufr')

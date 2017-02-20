@@ -10,7 +10,8 @@ list of some of the features:
 * Handles both compressed and un-compressed messages
 * Handles all practical operator descriptors, including data quality info,
   stats, bitmaps, etc.
-* Comprehensive query support for the data section
+* Comprehensive Query support for BUFR messages
+* Script support enables flexible extensions, e.g. filtering through large number of files.
 * Tested with the same set of BUFR files used by
   `ecCodes <https://software.ecmwf.int/wiki/display/ECC/ecCodes+Home>`_
   and `BUFRDC <https://software.ecmwf.int/wiki/display/BUFR/BUFRDC+Home>`_.
@@ -66,7 +67,10 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 * Decode only the metadata sections of a BUFR file
     ``pybufrkit info BUFR_FILE``
 
-* Query all values for descriptor 001002
+* Query values from the metadata sections (section 0, 1, 2, 3):
+    ``pybufrkit query %n_subsets BUFR_FILE``
+
+* Query all values for descriptor 001002 of the data section
     ``pybufrkit query 001002 BUFR_FILE``
 
 * Query for those root level 001002 of the BUFR Template
@@ -80,6 +84,10 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 
 * Query for associated field of 021062
     ``pybufrkit query 021062.A21062 BUFR_FILE``
+
+* Filtering through a number of BUFR files with Script support
+  (find files that have multiple subsets):
+    ``pybufrkit script 'if ${%n_subsets} > 1: print(PBK_FILENAME)' DIRECTORY/*.bufr``
 
 * Lookup information for a Element Descriptor (along with its code table)
     ``pybufrkit lookup -l 020003``
@@ -109,7 +117,19 @@ The following code shows an example of basic library usage::
     with open(BUFR_OUTPUT_FILE, 'wb') as outs:
         outs.write(bufr_message_new.serialized_bytes)
 
+    # Query the metadata
+    from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent
+    n_subsets = MetadataQuerent(MetadataExprParser()).query(bufr_message, '%n_subsets')
+
     # Query the data
-    from pybufrkit.query import NodePathParser, DataQuerent
+    from pybufrkit.dataquery import NodePathParser, DataQuerent
     query_result = DataQuerent(NodePathParser()).query(bufr_message, '001002')
 
+    # Script
+    from pybufrkit.script import ScriptRunner
+    # NOTE: must use the function version of print (Python 3), NOT the statement version
+    code = """print('Multiple' if ${%n_subsets} > 1 else 'Single')"""
+    runner = ScriptRunner(code)
+    runner.run(bufr_message)
+
+**For more help, please check the documentation site at** http://pybufrkit.readthedocs.io/

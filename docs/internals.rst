@@ -122,13 +122,39 @@ is especially necessary when some operator descriptors, such as 204YYY
 236, 237), make some values as attributes to other values. The wiring process
 associates attributes to their owners so that their meanings are explicit.
 
-Query the Template Data
-^^^^^^^^^^^^^^^^^^^^^^^
+Query A Decoded BUFR Message
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A query can be performed against either the metadata sections (section 0, 1, 2,
+3) or the data section (the template data). Though they are implemented
+separately in the backend, they share the same command line interface. This is
+made possible by requiring metadata query expression to always starts with a
+percentage sign (%).
+
+Query the Metadata Section
+==========================
 The following is a rough
 `EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
-for the query string::
+of query expression for metadata sections::
 
-    <query_string> = [<subset_spec>] <path_spec>+
+    <query_expr> = '%'[<section_index>.]<parameter_name>
+
+where the ``parameter_name`` are those defined in the configuration files,
+e.g. ``n_subsets``, ``edition``, etc.
+
+The query always return a scalar value. For parameters that are common for
+multiple sections, e.g. ``section_length``, the first one will be returned.
+For ``section_length``, this means the entry of Section 1 is returned. To
+explicitly specify the Section, a ``section_index`` can be added in between
+the percentage sign and the ``parameter_name``, e.g. ``%2.section_length``
+will return the parameter value from Section 2 instead of 1.
+
+Query the Template Data
+=======================
+The following is a rough
+`EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
+of query expression for template data::
+
+    <query_expr> = [<subset_spec>] <path_spec>+
     <subset_spec> = '@'<slice>
     <path_spec> = <separator> <descriptor_id> [<slice>]
     <separator> = '/' | '.' | '>'
@@ -136,7 +162,7 @@ for the query string::
 * The ``<slice>`` takes the same syntax as how Python list can be sliced,
   e.g. ``[1]``, ``[-1]``, ``[:]``, ``[::10]``.
 
-* The ``<descriptor_id>`` is the 6-letter (always including leading zeros) descriptor ID,
+* The ``<descriptor_id>`` is the 6-letter/digit (leading zeros are required) descriptor ID,
   e.g. ``001001``, ``301001``, ``A21062``.
 
 * The ``<separator>`` can be omitted and defaults to ``>`` if a query string begins
@@ -144,7 +170,7 @@ for the query string::
 
 * Whitespaces are ignored.
 
-Here is a few examples of valid query strings:
+The followings list a few examples of valid query expressions:
 
 * ``008042`` - All instances of descriptor ``008042`` regardless of where it appears.
   This form is equivalent to ``> 008042``.
@@ -180,6 +206,52 @@ The query is performed against the wired hierarchical Template Data, which is
   If a descriptor is not populated, it cannot be queried (an error will be thrown).
   For an example, if a delayed replication block has Zero replication, none of
   its descendant descriptors could be queried.
+
+Script Support
+^^^^^^^^^^^^^^
+Built upon the query feature, the script feature enables more flexible usage of
+the toolkit. The feature leverages full power of Python by embedding query
+expressions and injecting additional variables into normal Python code. For
+example, the following script filters for files that uses BUFR Template 309052::
+
+    if 309052 in ${%unexpanded_descriptors}: print(PBK_FILENAME)
+
+Note that the query expressions are embedded into the code by enclosing them
+inside ``${...}``. Also ``PBK_FILENAME`` is an extra variable injected to hold
+the name of the current BUFR file. Note you must use ``print`` as a function
+as mandated the Python 3 (this is due to the use of ``__future__`` import in
+the code).
+
+You can also embed data queries like the follows::
+
+    print(${005001}, ${006001})
+
+The above script prints latitude and longitude values from given BUFR files.
+One thing to note about data values is that they are by nature hierarchical.
+A file could contain multiple subsets, each subset could have replications.
+So the raw form of data values are nested list. However nested lists are
+rather difficult to work with and sometimes unnecessary. So it is possible
+to specify the nesting level of data values so they are easier to work with.
+By default, all values are turned into a simple list without any nesting.
+For an example, if each subset has one value for the given query, a list
+of N scalar values will be return with N equals to the number of subsets.
+This is referred as nesting level One as there is only one level of parenthesis
+for the returned value. All available nesting levels are:
+
+* 0 - No parenthesis, only the first value will be returned (all other are simply ignored)
+* 1 - One level of parenthesis (default). Values from all subsets are simply
+  flattened into one simple list.
+* 2 - Two level of parenthesis. Values from each subset are flatten into
+  one list, which is itself an element of the final return values.
+* 4 - Fully hierarchical. No flatten at all. Each subset or replication have
+  its own parenthesis grouping.
+
+The above settings can be controlled via the command line option, ``-n`` or
+``--data-values-nest-level``. Alternatively it can also be specified with
+the script itself using magic comment like ``#$ data_values_nest_level = 0``.
+Note that comment line must start with ``#$`` and must appears before any
+other lines. The option passed from command line takes precedence over
+the option from the script itself.
 
 Renderer
 ^^^^^^^^

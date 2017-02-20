@@ -18,15 +18,33 @@ def read_bufr_file(file_name):
     return s
 
 
-def test_simple():
-    script = 'length = ${%length}'
-    s, variables = process_embedded_query_expr(script)
-    assert s == 'length = PBK_0'
+def test_pragma():
+    # Default value
+    code = 'print("something")'
+    runner = ScriptRunner(code)
+    assert runner.pragma['data_values_nest_level'] == 1
 
-# def test_no_processing_comments():
-#     script = '# length = ${%length}'
-#     s, variables = process_embedded_query_expr(script)
-#     assert s == '# length = ${%length}'
+    # Override from inside script
+    code = '#$ data_values_nest_level = 4\nprint("something")'
+    runner = ScriptRunner(code)
+    assert runner.pragma['data_values_nest_level'] == 4
+
+    # Override from method keyword
+    runner = ScriptRunner(code, data_values_nest_level=0)
+    assert runner.pragma['data_values_nest_level'] == 0
+
+
+def test_embedded_query():
+    script = 'length = ${%length}; v = ${001001}'
+    s, variables = process_embedded_query_expr(script)
+    assert s == 'length = PBK_0; v = PBK_1'
+
+
+def test_no_processing_comments():
+    script = 'length = ${%length}  # length = ${%length}\nsomething = ${001001}'
+    s, variables = process_embedded_query_expr(script)
+    assert s == 'length = PBK_0  # length = ${%length}\nsomething = PBK_1'
+
 
 def test_single_var_for_multi_instances_of_same_query_expr():
     script = 'length = ${%length}\nanother_length = ${%length}'
@@ -34,8 +52,17 @@ def test_single_var_for_multi_instances_of_same_query_expr():
     assert s == 'length = PBK_0\nanother_length = PBK_0'
 
 
-def test():
+def test_assignment():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
-    script = 'print("The length is", ${%length})'
-    ScriptRunner(script).run(bufr_message)
+    script = 'print("The length is", ${%length})\na = ${%originating_centre}'
+    variables = ScriptRunner(script).run(bufr_message)
+    assert variables['a'] == 98
+
+
+def test_variable_injection():
+    s = read_bufr_file('jaso_214.bufr')
+    bufr_message = decoder.process(s, file_path='FILE.bufr')
+    script = 'a = PBK_FILENAME'
+    variables = ScriptRunner(script).run(bufr_message)
+    assert variables['a'] == 'FILE.bufr'

@@ -17,6 +17,8 @@ from pybufrkit.templatedata import (
     FixedReplicationNode, DelayedReplicationNode, SequenceNode
 )
 
+__all__ = ['NodePathParser', 'DataQuerent', 'QueryResult', 'PATH_SEPARATOR_CHILD']
+
 _PathComponent = namedtuple('PathComponent', ['separator', 'id', 'slice'])
 
 log = logging.getLogger(__file__)
@@ -74,14 +76,8 @@ STATE_START_SLICE_X = ':'
 STATE_STOP_SLICE = ']'
 
 
-class NodePathParser(object):
-    @abc.abstractmethod
-    def parse(self, path_string):
-        pass
-
-
 # noinspection PyAttributeOutsideInit
-class BasicNodePathParser(NodePathParser):
+class NodePathParser(object):
     """
     This class provides a parser for parsing path query string.
     """

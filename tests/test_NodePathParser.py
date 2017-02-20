@@ -4,7 +4,7 @@ from __future__ import print_function
 import os
 import unittest
 
-from pybufrkit.dataquery import BasicNodePathParser
+from pybufrkit.dataquery import NodePathParser
 from pybufrkit.errors import PathExprParsingError
 
 BASE_DIR = os.path.dirname(__file__)
@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(__file__)
 
 class NodePathParserTests(unittest.TestCase):
     def setUp(self):
-        self.parser = BasicNodePathParser()
+        self.parser = NodePathParser()
 
     def test(self):
         slice_all = slice(None, None, None)

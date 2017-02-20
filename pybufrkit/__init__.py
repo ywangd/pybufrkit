@@ -29,7 +29,7 @@ from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
 from pybufrkit.renderer import FlatTextRenderer, FlatJsonRenderer, NestedTextRenderer, NestedJsonRenderer
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -38,7 +38,7 @@ LOGGER.addHandler(logging.NullHandler())  # so testings do not complain about no
 
 def main():
     ap = argparse.ArgumentParser(prog=__name__,
-                                 description='Python Toolkit for BUFR Messages',
+                                 description='Pure Python Toolkit for BUFR Messages',
                                  add_help=False)
     ap.add_argument('-h', '--help', action='help',
                     help='Show this help message and exit')
@@ -170,15 +170,17 @@ def main():
                                    'A value greater than 0 is needed to activate template compilation.')
 
     script_parser = subparsers.add_parser('script', help='Run script against BUFR messages')
-    script_parser.add_argument('script', nargs='?',
-                               help='A script string or filename to load the script')
+    script_parser.add_argument('input',
+                               help='A script string or filename to load the script (use - for stdin)')
     script_parser.add_argument('filenames', metavar='filename',
                                nargs='+',
                                help='BUFR file to decode')
-    script_parser.add_argument('-f', '--script-file', help='load script from file')
-    script_parser.add_argument('-F', '--data-values-flatten-level',
+    script_parser.add_argument('-f', '--from-file', action='store_true',
+                               help='load script from file')
+    script_parser.add_argument('-n', '--data-values-nest-level',
                                type=int,
-                               help='The flatten level for data values')
+                               choices=(0, 1, 2, 4),
+                               help='The level of list nesting for data values')
     script_parser.add_argument('--ignore-value-expectation',
                                action='store_true',
                                help='Do not validate value expectations, e.g. 7777 stop signature')
@@ -323,8 +325,8 @@ def main():
                 else:
                     bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
                                                    ignore_value_expectation=ns.ignore_value_expectation)
-                    from pybufrkit.dataquery import BasicNodePathParser, DataQuerent
-                    querent = DataQuerent(BasicNodePathParser())
+                    from pybufrkit.dataquery import NodePathParser, DataQuerent
+                    querent = DataQuerent(NodePathParser())
                     query_result = querent.query(bufr_message, ns.query_string)
                     if ns.json:
                         if ns.nested:
@@ -338,17 +340,17 @@ def main():
         elif ns.sub_command == 'script':
             from pybufrkit.script import ScriptRunner
 
-            if ns.script_file:
-                with open(ns.script) as ins:
+            if ns.from_file:
+                with open(ns.input) as ins:
                     script_string = ins.read()
             else:
-                if ns.script == '-':
+                if ns.input == '-':
                     script_string = sys.stdin.read()
                 else:
-                    script_string = ns.script
+                    script_string = ns.input
 
             script_runner = ScriptRunner(script_string,
-                                         data_values_flatten_level=ns.data_values_flatten_level)
+                                         data_values_nest_level=ns.data_values_nest_level)
 
             decoder = Decoder(definitions_dir=ns.definitions_directory,
                               tables_root_dir=ns.tables_root_directory,
