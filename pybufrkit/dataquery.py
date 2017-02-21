@@ -53,6 +53,22 @@ class NodePath(object):
         self.subset_slice = None
         self.components = []
 
+    def __str__(self):
+        ret = '' if self.subset_slice is None else '@{}'.format(self.slice_to_str(self.subset_slice))
+
+        for component in self.components:
+            ret += '{}{}{}'.format(
+                component.separator, component.id, self.slice_to_str(component.slice)
+            )
+        return ret
+
+    def slice_to_str(self, slc):
+        return '[{}]'.format(slc) if not isinstance(slc, slice) else '[{}:{}:{}]'.format(
+            slc.start if slc.start is not None else '',
+            slc.stop if slc.stop is not None else '',
+            slc.step if slc.step is not None else '',
+        )
+
     def add_component(self, component):
         self.components.append(component)
 
@@ -80,7 +96,14 @@ STATE_STOP_SLICE = ']'
 class NodePathParser(object):
     """
     This class provides a parser for parsing path query string.
+
+    :param bool bare_id_matches_all: By default, a path component with
+        bare ID, i.e. with no slicing part, means match all occurrences,
+        i.e. [::]. If set to False, it only matches the first occurence.
     """
+
+    def __init__(self, bare_id_matches_all=True):
+        self.bare_id_matches_all = bare_id_matches_all
 
     def reset(self):
         self.pos = 0
@@ -233,7 +256,10 @@ class NodePathParser(object):
 
     def create_slice_object(self):
         if len(self.current_slice_elements) == 0:
-            slc_obj = slice(None, None, None)
+            if self.bare_id_matches_all:
+                slc_obj = slice(None, None, None)
+            else:
+                slc_obj = 0
         elif len(self.current_slice_elements) == 1:
             # This must be true or the parsing logic is wrong
             assert isinstance(self.current_slice_elements[0], int)
