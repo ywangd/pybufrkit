@@ -15,6 +15,7 @@ from copy import deepcopy
 from collections import OrderedDict
 from datetime import datetime
 
+from pybufrkit.errors import *
 from pybufrkit.constants import BASE_DIR, NBITS_PER_BYTE, PARAMETER_TYPE_TEMPLATE_DATA
 from pybufrkit.tables import get_table_group
 
@@ -25,6 +26,7 @@ class SectionParameter(object):
     """
     This class represents a Parameter of a Bufr Section.
     """
+
     def __init__(self, name, nbits, data_type, expected, as_property):
         # type: (str, int, str, object, bool) -> None
         self.name = name
@@ -356,6 +358,29 @@ class BufrMessage(object):
         descriptors.
         """
         self.template_data.value.wire()
+
+    def subset(self, subset_indices):
+        if max(subset_indices) >= len(subset_indices):
+            raise PyBufrKitError('maximum subset index out of range')
+        if min(subset_indices) < 0:
+            raise PyBufrKitError('minimum subset index out of range')
+
+        data = []
+        for section in self.sections:
+            section_data = []
+            for parameter in section:
+                if parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
+                    section_data.append(
+                        [v for i, v in enumerate(parameter.value.decoded_values_all_subsets)
+                         if i in subset_indices]
+                    )
+                else:
+                    section_data.append(
+                        len(subset_indices) if parameter.name == 'n_subsets'
+                        else parameter.value
+                    )
+            data.append(section_data)
+        return data
 
     # Proxy properties follows
     @property

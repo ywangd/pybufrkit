@@ -50,7 +50,7 @@ class Encoder(Coder):
     def __init__(self,
                  definitions_dir=None,
                  tables_root_dir=None,
-                 ignore_declared_length=False,
+                 ignore_declared_length=True,
                  compiled_template_cache_max=None):
 
         super(Encoder, self).__init__(definitions_dir, tables_root_dir)
@@ -63,8 +63,7 @@ class Encoder(Coder):
         else:
             self.compiled_template_manager = None
 
-    def process(self, s, file_path='<string>',
-                wire_template_data=True):
+    def process(self, s, file_path='<string>', wire_template_data=True):
         """
         Entry point for the encoding process. The process encodes a JSON format
         message to BUFR message.
@@ -83,8 +82,12 @@ class Encoder(Coder):
         else:
             json_data = s
 
+        return self.process_json(json_data, file_path=file_path, wire_template_data=wire_template_data)
+
+    def process_json(self, json_data, file_path='<string>', wire_template_data=True):
+
         bit_writer = get_bit_writer()
-        bufr_message = BufrMessage()
+        bufr_message = BufrMessage(filename=file_path)
 
         nbits_encoded = 0
         section_index = 0

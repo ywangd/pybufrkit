@@ -149,6 +149,23 @@ def main():
     compile_parser.add_argument('--local-table-version',
                                 help='The local table version')
 
+    subset_parser = subparsers.add_parser('subset', help='Subset BUFR messages')
+    subset_parser.add_argument('subset_indices',
+                               help='A comma separate list of subset indices (zero based)')
+    subset_parser.add_argument('filename', metavar='filename',
+                               help='BUFR file to subset')
+    subset_parser.add_argument('output_filename',
+                               metavar='output_file',
+                               nargs='?', default='out.bufr',
+                               help='The output BUFR file, default out.bufr')
+    subset_parser.add_argument('--ignore-value-expectation',
+                               action='store_true',
+                               help='Do not validate value expectations, e.g. 7777 stop signature')
+    subset_parser.add_argument('--compiled-template-cache-max',
+                               type=int,
+                               help='The maximum number of compiled templates to cache. '
+                                    'A value greater than 0 is needed to activate template compilation.')
+
     query_parser = subparsers.add_parser('query', help='Query metadata and data of BUFR messages')
     query_parser.add_argument('query_string',
                               help='A query string')
@@ -304,6 +321,27 @@ def main():
                 template = table_group.template_from_ids(*descriptor_ids)
                 compiled_template = template_compiler.process(template, table_group)
                 print(json.dumps(compiled_template.to_dict()))
+
+        elif ns.sub_command == 'subset':
+            decoder = Decoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
+            encoder = Encoder(definitions_dir=ns.definitions_directory,
+                              tables_root_dir=ns.tables_root_directory,
+                              compiled_template_cache_max=ns.compiled_template_cache_max)
+
+            subset_indices = [int(x) for x in ns.subset_indices.split(',')]
+            with open(ns.filename, 'rb') as ins:
+                s = ins.read()
+
+            bufr_message = decoder.process(s, file_path=ns.filename, wire_template_data=False,
+                                           ignore_value_expectation=ns.ignore_value_expectation)
+
+            data = bufr_message.subset(subset_indices)
+            nb = encoder.process_json(data, file_path=ns.output_filename, wire_template_data=False)
+
+            with open(ns.output_filename, 'wb') as outs:
+                outs.write(nb.serialized_bytes)
 
         elif ns.sub_command == 'query':
             decoder = Decoder(definitions_dir=ns.definitions_directory,

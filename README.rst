@@ -10,6 +10,7 @@ list of some of the features:
 * Handles both compressed and un-compressed messages
 * Handles all practical operator descriptors, including data quality info,
   stats, bitmaps, etc.
+* Convenient subsetting for BUFR messages
 * Comprehensive Query support for BUFR messages
 * Script support enables flexible extensions, e.g. filtering through large number of files.
 * Tested with the same set of BUFR files used by
@@ -66,6 +67,9 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 
 * Decode only the metadata sections of a BUFR file
     ``pybufrkit info BUFR_FILE``
+
+* Subset from a given BUFR file
+    ``pybufrkit subset 0,3,6,9 BUFR_FILE``
 
 * Query values from the metadata sections (section 0, 1, 2, 3):
     ``pybufrkit query %n_subsets BUFR_FILE``
