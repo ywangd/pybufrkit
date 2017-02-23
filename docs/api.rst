@@ -36,6 +36,9 @@ API reference
 .. automodule:: pybufrkit.mdquery
     :members:
 
+.. automodule:: pybufrkit.query
+    :members:
+
 .. automodule:: pybufrkit.script
     :members:
 
@@ -43,6 +46,9 @@ API reference
     :members:
 
 .. automodule:: pybufrkit.bitops
+    :members:
+
+.. automodule:: pybufrkit.commands
     :members:
 
 .. automodule:: pybufrkit.constants

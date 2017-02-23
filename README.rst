@@ -21,7 +21,7 @@ Find more documentation at http://pybufrkit.readthedocs.io/
 
 Installation
 ------------
-PyBufrKit is compatible with both Python 2.7+ and 3.5+. To install from PyPi::
+PyBufrKit is compatible with both Python 2.7 and 3.5+. To install from PyPi::
 
     pip install pybufrkit
 
@@ -43,7 +43,7 @@ where the ``sub-command`` is one of following actions that can be performed by t
 * ``info`` - Decode only the metadata sections (i.e. section 0, 1, 2, 3) of given BUFR files
 * ``subset`` - Subset the given BUFR file and save as new file
 * ``query`` - Query metadata or data of given BUFR files
-* ``script` - Embed BUFR query expressions into normal Python script
+* ``script`` - Embed BUFR query expressions into normal Python script
 * ``lookup`` - Look up information about the given list of comma separated BUFR descriptors
 * ``compile`` - Compile the given comma separated BUFR descriptors
 

@@ -1,7 +1,6 @@
 """
 pybufrkit.query
 ~~~~~~~~~~~~~~~
-
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -13,7 +12,7 @@ from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent, METADATA_QUER
 
 class BufrMessageQuerent(object):
     """
-    This class is a wrapper for querents of metadata and data sections.
+    This is a convenient class for querents of metadata and data sections.
     It provides an uniform interface for querying the BufrMessage object.
     """
 

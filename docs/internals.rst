@@ -12,7 +12,7 @@ program changes.
 The builtin Configuration JSON files are located in the
 `definitions <https://github.com/ywangd/pybufrkit/tree/master/pybufrkit/definitions>`_
 directory inside the package. It can also be configured to load from an user
-provided directory. The naming convention of the files is as follows::
+provided directory. The naming convention of the files is as the follows::
 
     sectionX[-Y].json
 
@@ -122,37 +122,38 @@ is especially necessary when some operator descriptors, such as 204YYY
 236, 237), make some values as attributes to other values. The wiring process
 associates attributes to their owners so that their meanings are explicit.
 
-Query A Decoded BUFR Message
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A query can be performed against either the metadata sections (section 0, 1, 2,
-3) or the data section (the template data). Though they are implemented
+Query BUFR Messages
+^^^^^^^^^^^^^^^^^^^
+Queries can be performed against either the metadata sections (section 0, 1, 2,
+3) or the data section (the Template data). Though they are implemented
 separately in the backend, they share the same command line interface. This is
-made possible by requiring metadata query expression to always starts with a
+made possible by requiring metadata query expression to always start with a
 percentage sign (%).
 
 Query the Metadata Section
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-The following is a rough
+The following is the
 `EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
-of query expression for metadata sections::
+form of query expressions for metadata sections::
 
     <query_expr> = '%'[<section_index>.]<parameter_name>
 
 where the ``parameter_name`` are those defined in the configuration files,
 e.g. ``n_subsets``, ``edition``, etc.
 
-The query always return a scalar value. For parameters that are common for
-multiple sections, e.g. ``section_length``, the first one will be returned.
-For ``section_length``, this means the entry of Section 1 is returned. To
-explicitly specify the Section, a ``section_index`` can be added in between
-the percentage sign and the ``parameter_name``, e.g. ``%2.section_length``
-will return the parameter value from Section 2 instead of 1.
+The metadata query always return a scalar value. For parameters that are common
+across multiple sections, e.g. ``section_length``, the first entry will be
+returned by default. For an example, the parameter ``section_length`` appears in
+Secton 1, 2, 3, and 4. By default, the entry of Section 1 is queried and its
+value is returned. To explicitly specify a Section, a ``section_index`` can be
+added in between the percentage sign and the ``parameter_name``, e.g.
+``%2.section_length`` returns the parameter value from Section 2 instead of 1.
 
 Query the Template Data
 ~~~~~~~~~~~~~~~~~~~~~~~
-The following is a rough
+The following is the
 `EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
-of query expression for template data::
+form of query expressions for template data::
 
     <query_expr> = [<subset_spec>] <path_spec>+
     <subset_spec> = '@'<slice>
@@ -203,9 +204,9 @@ The query is performed against the wired hierarchical Template Data, which is
   can be queried using the Dot (``.``) separator.
 
 * *Populated* - The Template is populated with actual data from the Data section.
-  If a descriptor is not populated, it cannot be queried (an error will be thrown).
-  For an example, if a delayed replication block has Zero replication, none of
-  its descendant descriptors could be queried.
+  If a descriptor is not populated, for an example, a delayed replication block
+  may have Zero replication, an empty list will be returned when any of its
+  children is queried.
 
 Script Support
 ^^^^^^^^^^^^^^
@@ -217,10 +218,10 @@ example, the following script filters for files that uses BUFR Template 309052::
     if 309052 in ${%unexpanded_descriptors}: print(PBK_FILENAME)
 
 Note that the query expressions are embedded into the code by enclosing them
-inside ``${...}``. Also ``PBK_FILENAME`` is an extra variable injected to hold
-the name of the current BUFR file. Note you must use ``print`` as a function
-as mandated the Python 3 (this is due to the use of ``__future__`` import in
-the code).
+inside ``${...}``. Also ``PBK_FILENAME`` is an extra variable injected by the
+toolkit to hold the name of current file being processed.
+Note you must use the function version of ``print``. This is due to the use of
+``__future__`` import in the code. But otherwise no Python 3 syntax is enforced.
 
 You can also embed data queries like the follows::
 
@@ -238,18 +239,22 @@ of N scalar values will be return with N equals to the number of subsets.
 This is referred as nesting level One as there is only one level of parenthesis
 for the returned value. All available nesting levels are:
 
-* 0 - No parenthesis, only the first value will be returned (all other are simply ignored)
+* 0 - No parenthesis, only the first value will be returned as a scalar
+  (all other values, if any, are simply dropped)
 * 1 - One level of parenthesis (default). Values from all subsets are simply
   flattened into one simple list.
 * 2 - Two level of parenthesis. Values from each subset are flatten into
-  one list, which is itself an element of the final return values.
+  its own list, which is itself an element of the final return value.
 * 4 - Fully hierarchical. No flatten at all. Each subset or replication have
   its own parenthesis grouping.
 
 The above settings can be controlled via the command line option, ``-n`` or
 ``--data-values-nest-level``. Alternatively it can also be specified with
-the script itself using magic comment like ``#$ data_values_nest_level = 0``.
-Note that comment line must start with ``#$`` and must appears before any
+the script itself using following magic comment at the beginning::
+
+    ``#$ data_values_nest_level = 0``
+
+Note the magic comment line starts with ``#$`` and must appears before any
 other lines. The option passed from command line takes precedence over
 the option from the script itself.
 

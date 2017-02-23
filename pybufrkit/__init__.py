@@ -14,20 +14,12 @@ Work with WMO BUFR messages with Pure Python.
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys
-import os
-import json
-import logging
 import argparse
-import six
+import logging
+import sys
 
-from pybufrkit.constants import UNITS_FLAG_TABLE, UNITS_CODE_TABLE, UNITS_COMMON_CODE_TABLE_C1
+from pybufrkit.commands import *
 from pybufrkit.errors import *
-from pybufrkit.decoder import Decoder
-from pybufrkit.encoder import Encoder
-from pybufrkit.descriptors import ElementDescriptor
-from pybufrkit.tables import get_table_group
-from pybufrkit.renderer import FlatTextRenderer, FlatJsonRenderer, NestedTextRenderer, NestedJsonRenderer
 
 __version__ = '0.2.2'
 __author__ = 'ywangd@gmail.com'
@@ -76,6 +68,9 @@ def main():
     decode_parser.add_argument('-a', '--attributed',
                                action='store_true',
                                help='Wire data to set attributes')
+    decode_parser.add_argument('-m', '--multiple-messages',
+                               action='store_true',
+                               help='Each given file could have one or more messages')
     decode_parser.add_argument('--ignore-value-expectation',
                                action='store_true',
                                help='Do not validate value expectations, e.g. 7777 stop signature')
@@ -102,10 +97,19 @@ def main():
                                         help='Show BUFR file information')
     info_parser.add_argument('filenames', metavar='filename',
                              nargs='+',
-                             help='BUFR file to decode')
+                             help='BUFR files to decode')
     info_parser.add_argument('-t', '--template',
                              action='store_true', default=False,
                              help='Show expanded template')
+    info_parser.add_argument('-m', '--multiple-messages',
+                             action='store_true',
+                             help='Each given file could have one or more messages')
+
+    split_parser = subparsers.add_parser(
+        'split',
+        help='Split given files so each file contains a single BUFR Message per file.')
+    split_parser.add_argument('filenames', metavar='filename', nargs='+',
+                              help='BUFR files to split')
 
     lookup_parser = subparsers.add_parser(
         'lookup',
@@ -224,185 +228,31 @@ def main():
 
     try:
         if ns.sub_command == 'decode':
-            decoder = Decoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-
-            for filename in ns.filenames:
-                with open(filename, 'rb') as ins:
-                    s = ins.read()
-
-                bufr_message = decoder.process(s, file_path=filename, wire_template_data=False,
-                                               ignore_value_expectation=ns.ignore_value_expectation)
-
-                if ns.attributed:
-                    bufr_message.wire()
-                    print(NestedTextRenderer().render(bufr_message))
-                elif ns.json:
-                    print(FlatJsonRenderer().render(bufr_message))
-                else:
-                    print(FlatTextRenderer().render(bufr_message))
+            command_decode(ns)
 
         elif ns.sub_command == 'info':
-            flat_text_render = FlatTextRenderer()
-            decoder = Decoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory)
-
-            for filename in ns.filenames:
-                with open(filename, 'rb') as ins:
-                    s = ins.read()
-                    bufr_message = decoder.process(s, file_path=filename, info_only=True)
-
-                bufr_template, table_group = bufr_message.build_template(
-                    ns.tables_root_directory, normalize=1)
-
-                print(flat_text_render.render(bufr_message))
-                if ns.template:
-                    print(flat_text_render.render(bufr_template))
+            command_info(ns)
 
         elif ns.sub_command == 'encode':
-            encoder = Encoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-            if ns.json_filename != '-':
-                with open(ns.json_filename) as ins:
-                    s = ins.read()
-            else:  # read from stdin, this is useful for piping
-                s = sys.stdin.read()
-            bufr_message = encoder.process(s, '<stdin>' if ns.json_filename else ns.json_filename,
-                                           wire_template_data=False)
-            if ns.output_filename:
-                with open(ns.output_filename, 'wb') as outs:
-                    outs.write(bufr_message.serialized_bytes)
+            command_encode(ns)
 
-        elif ns.sub_command in ('lookup', 'compile'):
-            table_group = get_table_group(ns.tables_root_directory,
-                                          ns.master_table_number,
-                                          ns.originating_centre,
-                                          ns.originating_subcentre,
-                                          ns.master_table_version,
-                                          ns.local_table_version)
+        elif ns.sub_command == 'split':
+            command_split(ns)
 
-            if ns.sub_command == 'lookup':
-                flat_text_render = FlatTextRenderer()
-                table_group.B.load_code_and_flag()  # load the code and flag tables for additional details
-                descriptors = table_group.descriptors_from_ids(
-                    *[d.strip() for d in ns.descriptors.split(',')]
-                )
+        elif ns.sub_command == 'lookup':
+            command_lookup(ns)
 
-                for descriptor in descriptors:
-                    if isinstance(descriptor, ElementDescriptor):
-                        print('{}, {}, {}, {}, {}'.format(flat_text_render.render(descriptor),
-                                                          descriptor.unit,
-                                                          descriptor.scale,
-                                                          descriptor.refval,
-                                                          descriptor.nbits))
-                        if ns.code_and_flag and descriptor.unit in (UNITS_FLAG_TABLE,
-                                                                    UNITS_CODE_TABLE,
-                                                                    UNITS_COMMON_CODE_TABLE_C1):
-                            code_and_flag = table_group.B.code_and_flag_for_descriptor(descriptor)
-                            if code_and_flag:
-                                for v, description in code_and_flag:
-                                    output = u'{:8d} {}'.format(v, description)
-                                    # With Python 2, some terminal utilities, e.g. more, redirect to file,
-                                    # cause errors when unicode string is printed. The fix is to encode
-                                    # them before print.
-                                    if six.PY2:
-                                        output = output.encode('utf-8', 'ignore')
-                                    print(output)
-                    else:
-                        print(flat_text_render.render(descriptor))
-
-            else:  # compile
-                from pybufrkit.templatecompiler import TemplateCompiler
-                template_compiler = TemplateCompiler()
-                descriptor_ids = [x.strip() for x in ns.descriptors.split(',')]
-                table_group = get_table_group(tables_root_dir=ns.tables_root_directory)
-                template = table_group.template_from_ids(*descriptor_ids)
-                compiled_template = template_compiler.process(template, table_group)
-                print(json.dumps(compiled_template.to_dict()))
+        elif ns.sub_command == 'compile':
+            command_compile(ns)
 
         elif ns.sub_command == 'subset':
-            decoder = Decoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-            encoder = Encoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-
-            subset_indices = [int(x) for x in ns.subset_indices.split(',')]
-            with open(ns.filename, 'rb') as ins:
-                s = ins.read()
-
-            bufr_message = decoder.process(s, file_path=ns.filename, wire_template_data=False,
-                                           ignore_value_expectation=ns.ignore_value_expectation)
-
-            data = bufr_message.subset(subset_indices)
-            nb = encoder.process_json(data, file_path=ns.output_filename, wire_template_data=False)
-
-            with open(ns.output_filename, 'wb') as outs:
-                outs.write(nb.serialized_bytes)
+            command_subset(ns)
 
         elif ns.sub_command == 'query':
-            decoder = Decoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-
-            for filename in ns.filenames:
-                with open(filename, 'rb') as ins:
-                    s = ins.read()
-
-                if ns.query_string.strip()[0] == '%':
-                    bufr_message = decoder.process(s, file_path=filename, info_only=True)
-                    from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent
-                    querent = MetadataQuerent(MetadataExprParser())
-                    value = querent.query(bufr_message, ns.query_string)
-                    print(filename)
-                    print(value)
-
-                else:
-                    bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
-                                                   ignore_value_expectation=ns.ignore_value_expectation)
-                    from pybufrkit.dataquery import NodePathParser, DataQuerent
-                    querent = DataQuerent(NodePathParser())
-                    query_result = querent.query(bufr_message, ns.query_string)
-                    if ns.json:
-                        if ns.nested:
-                            print(NestedJsonRenderer().render(query_result))
-                        else:
-                            print(FlatJsonRenderer().render(query_result))
-                    else:
-                        print(filename)
-                        print(FlatTextRenderer().render(query_result))
+            command_query(ns)
 
         elif ns.sub_command == 'script':
-            from pybufrkit.script import ScriptRunner
-
-            if ns.from_file:
-                with open(ns.input) as ins:
-                    script_string = ins.read()
-            else:
-                if ns.input == '-':
-                    script_string = sys.stdin.read()
-                else:
-                    script_string = ns.input
-
-            script_runner = ScriptRunner(script_string,
-                                         data_values_nest_level=ns.data_values_nest_level)
-
-            decoder = Decoder(definitions_dir=ns.definitions_directory,
-                              tables_root_dir=ns.tables_root_directory,
-                              compiled_template_cache_max=ns.compiled_template_cache_max)
-
-            for filename in ns.filenames:
-                with open(filename, 'rb') as ins:
-                    s = ins.read()
-
-                bufr_message = decoder.process(s, file_path=filename, wire_template_data=True,
-                                               ignore_value_expectation=ns.ignore_value_expectation,
-                                               info_only=script_runner.metadata_only)
-
-                script_runner.run(bufr_message)
+            command_script(ns)
 
         else:
             print('Unknown sub-command: {}'.format(ns.sub_command))

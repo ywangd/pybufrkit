@@ -374,3 +374,25 @@ class Decoder(Coder):
         state.decoded_descriptors.append(descriptor)
         for decoded_values in state.decoded_values_all_subsets:
             decoded_values.append(value)
+
+
+def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
+    """
+    This is a generator function that processes the given string for one
+    or more BufrMessage till it is exhausted.
+
+    :param Decoder decoder: Decoder to use
+    :param bytes s: String to decode for messages
+    :return: BufrMessage object
+    """
+    idx_start = 0
+    while idx_start < len(s):
+        idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
+        bufr_message = decoder.process(
+            s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
+        )
+        # If data section is not decoded, we rely on the declared length for the message length
+        if info_only:
+            bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
+        idx_start += len(bufr_message.serialized_bytes)
+        yield bufr_message
