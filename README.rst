@@ -11,7 +11,7 @@ list of some of the features:
 * Handles all practical operator descriptors, including data quality info,
   stats, bitmaps, etc.
 * Convenient subsetting for BUFR messages
-* Comprehensive Query support for BUFR messages
+* Comprehensive query support for BUFR messages
 * Script support enables flexible extensions, e.g. filtering through large number of files.
 * Tested with the same set of BUFR files used by
   `ecCodes <https://software.ecmwf.int/wiki/display/ECC/ecCodes+Home>`_
@@ -40,7 +40,10 @@ where the ``sub-command`` is one of following actions that can be performed by t
 
 * ``decode`` - Decode a BUFR file to outputs of various format, e.g. JSON
 * ``encode`` - Encode a BUFR file from a JSON input
-* ``info`` - Decode a BUFR file upt to the data associated to the BUFR Template (exclusive)
+* ``info`` - Decode only the metadata sections (i.e. section 0, 1, 2, 3) of given BUFR files
+* ``subset`` - Subset the given BUFR file and save as new file
+* ``query`` - Query metadata or data of given BUFR files
+* ``script` - Embed BUFR query expressions into normal Python script
 * ``lookup`` - Look up information about the given list of comma separated BUFR descriptors
 * ``compile`` - Compile the given comma separated BUFR descriptors
 

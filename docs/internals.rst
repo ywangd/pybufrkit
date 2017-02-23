@@ -131,7 +131,7 @@ made possible by requiring metadata query expression to always starts with a
 percentage sign (%).
 
 Query the Metadata Section
-==========================
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 The following is a rough
 `EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
 of query expression for metadata sections::
@@ -149,7 +149,7 @@ the percentage sign and the ``parameter_name``, e.g. ``%2.section_length``
 will return the parameter value from Section 2 instead of 1.
 
 Query the Template Data
-=======================
+~~~~~~~~~~~~~~~~~~~~~~~
 The following is a rough
 `EBNF <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
 of query expression for template data::
