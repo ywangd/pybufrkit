@@ -104,6 +104,8 @@ def main():
     info_parser.add_argument('-m', '--multiple-messages',
                              action='store_true',
                              help='Each given file could have one or more messages')
+    info_parser.add_argument('-c', '--count-only', action='store_true',
+                             help='Only count number of messages in the file')
 
     split_parser = subparsers.add_parser(
         'split',
@@ -138,12 +140,11 @@ def main():
         help='Compile the given BUFR Template (comma separated descriptor IDs)'
     )
 
-    compile_parser.add_argument('descriptors',
-                                metavar='descriptors',
-                                help='Comma separated descriptor IDs')
+    compile_parser.add_argument('input',
+                                metavar='input',
+                                help='BUFR file or Comma separated descriptor IDs')
     compile_parser.add_argument('--master-table-number',
                                 help='The master BUFR table Number')
-
     compile_parser.add_argument('--originating-centre',
                                 help='Code of the original centre')
     compile_parser.add_argument('--originating-subcentre',

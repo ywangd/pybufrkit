@@ -388,6 +388,8 @@ def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
     idx_start = 0
     while idx_start < len(s):
         idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
+        if idx_start < 0:
+            raise StopIteration
         bufr_message = decoder.process(
             s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
         )

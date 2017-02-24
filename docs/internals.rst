@@ -273,7 +273,7 @@ The above settings can be controlled via the command line option, ``-n`` or
 ``--data-values-nest-level``. Alternatively it can also be specified with
 the script itself using following magic comment at the beginning::
 
-    ``#$ data_values_nest_level = 0``
+    #$ data_values_nest_level = 0
 
 Note the magic comment line starts with ``#$`` and must appears before any
 other lines. The option passed from command line takes precedence over

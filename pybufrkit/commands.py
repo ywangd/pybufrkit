@@ -7,6 +7,7 @@ This file gathers all the functions that support the command line usages.
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import sys
 import json
 import six
@@ -81,6 +82,13 @@ def command_info(ns):
             for bufr_message in generate_bufr_message(decoder, s,
                                                       file_path=filename, info_only=True):
                 show_message_info(bufr_message)
+
+        elif ns.count_only:
+            count = 0
+            for _ in generate_bufr_message(decoder, s, info_only=True):
+                count += 1
+            print('{}: {}'.format(filename, count))
+
         else:
             bufr_message = decoder.process(s, file_path=filename, info_only=True)
             show_message_info(bufr_message)
@@ -171,14 +179,23 @@ def command_compile(ns):
     """
     from pybufrkit.templatecompiler import TemplateCompiler
     template_compiler = TemplateCompiler()
-    table_group = get_table_group(ns.tables_root_directory,
-                                  ns.master_table_number,
-                                  ns.originating_centre,
-                                  ns.originating_subcentre,
-                                  ns.master_table_version,
-                                  ns.local_table_version)
-    descriptor_ids = [x.strip() for x in ns.descriptors.split(',')]
-    template = table_group.template_from_ids(*descriptor_ids)
+
+    if os.path.exists(ns.input):
+        decoder = Decoder(definitions_dir=ns.definitions_directory,
+                          tables_root_dir=ns.tables_root_directory)
+        with open(ns.input, 'rb') as ins:
+            bufr_message = decoder.process(ins.read(), file_path=ns.input, info_only=True)
+            template, table_group = bufr_message.build_template(ns.tables_root_directory, normalize=1)
+    else:
+        table_group = get_table_group(ns.tables_root_directory,
+                                      ns.master_table_number,
+                                      ns.originating_centre,
+                                      ns.originating_subcentre,
+                                      ns.master_table_version,
+                                      ns.local_table_version)
+        descriptor_ids = [x.strip() for x in ns.input.split(',')]
+        template = table_group.template_from_ids(*descriptor_ids)
+
     compiled_template = template_compiler.process(template, table_group)
     print(json.dumps(compiled_template.to_dict()))
 
