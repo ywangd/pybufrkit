@@ -465,6 +465,8 @@ class DataQuerent(object):
         """
 
         log.debug('filter child sub-nodes for {}'.format(node))
+        if not hasattr(node, 'members'):
+            raise QueryError('{} has no child nodes'.format(node.descriptor))
 
         path_component = path_components[0]
 
@@ -515,6 +517,8 @@ class DataQuerent(object):
         """
 
         log.debug('filter attribute sub-nodes for {}'.format(node))
+        if not (hasattr(node, 'attributes') or hasattr(node, 'factor')):
+            raise QueryError('{} has no attribute nodes'.format(node.descriptor))
 
         path_component = path_components[0]
 
@@ -542,6 +546,9 @@ class DataQuerent(object):
         components till every component is matched or zero match is encountered.
         """
         log.debug('filter descendant sub-nodes for {}'.format(node))
+        if not (hasattr(node, 'members') or hasattr(node, 'attributes') or hasattr(node, 'factor')):
+            raise QueryError('{} has no descendant nodes'.format(node.descriptor))
+
         sub_nodes = []
         if hasattr(node, 'members'):
             child_sub_nodes = self.filter_for_child_sub_nodes(node, path_components)
@@ -660,9 +667,7 @@ class DataQuerent(object):
         # candidate as there might matches with its descendant nodes.
         if not matched and path_component.separator == PATH_SEPARATOR_DESCEND:
             matched = (
-                hasattr(node, 'members') or
-                (hasattr(node, 'attributes') and getattr(node, 'attributes')) or
-                hasattr(node, 'factor')
+                hasattr(node, 'members') or hasattr(node, 'attributes') or hasattr(node, 'factor')
             )
             return NODE_KEEP if matched else NODE_NOT_MATCH
 

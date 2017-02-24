@@ -326,11 +326,13 @@ class NestedTextRenderer(Renderer):
                 value
             )
         ]
-        ret.extend(
-            self._render_template_data_attributed_node(
-                decoded_node, decoded_descriptors, decoded_values, indent + INDENT_CHARS
+        if hasattr(decoded_node, 'attributes'):
+            ret.extend(
+                self._render_template_data_attributed_node(
+                    decoded_node, decoded_descriptors, decoded_values, indent + INDENT_CHARS
+                )
             )
-        )
+
         return ret
 
     def _render_template_data_attributed_node(self, decoded_node, decoded_descriptors, decoded_values, indent):

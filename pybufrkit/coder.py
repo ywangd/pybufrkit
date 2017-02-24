@@ -48,6 +48,7 @@ class AuditedList(list):
     """
     This class provides wrappers for some list methods, e.g. append, so that
     it is possible to execute additional code when the method is invoked.
+    It is used mainly for debug purpose.
     """
 
     def append(self, p_object):
@@ -57,8 +58,8 @@ class AuditedList(list):
 
 class CoderState(object):
     """
-    The state of VM for keeping track of variables when a VM is working. The use
-    of a new state for each run opens the possibility to use a single VM to run
+    The state of Coder for keeping track of variables when a Coder is working. The use
+    of a new state for each run makes it possible to use a single Coder to run
     multiple decoding/encoding tasks.
 
     :param decoded_values_all_subsets: This is only for Encoder use.
@@ -259,7 +260,8 @@ class Coder(object):
     def process_section(self, bufr_message, bit_operator, section):
         """
         Process the given section of a BUFR message
-        :param bufr_message:
+
+        :param bufr_message: The BufrMessage object to process
         :param bit_operator: The bit operator (reader or writer)
         :param section:
         """

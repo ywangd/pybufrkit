@@ -122,6 +122,27 @@ is especially necessary when some operator descriptors, such as 204YYY
 236, 237), make some values as attributes to other values. The wiring process
 associates attributes to their owners so that their meanings are explicit.
 
+Descriptors and Their IDs
+~~~~~~~~~~~~~~~~~~~~~~~~~
+In addition to the four canonical types of Descriptor defined by the BUFR Spec,
+this toolkit defines a few more Descriptors to help organise the decoded data.
+These new Descriptors are listed as follows:
+
+* **Associated Descriptor** - This descriptor is created for the associated field
+  that a Element Descriptor may have. Its 6-character ID is almost the same as
+  the Element Descriptor except starting with a letter **A**. For an example,
+  the ID of Associated Descriptor for Element Descriptor ``015037`` is ``A15037``.
+
+* **Skipped Local Descriptor** - This descriptor is used in place of any skipped
+  local descriptors. This descriptor's ID begins with a letter **S** and the other
+  5 digits are the same of the descriptor that is skipped.
+
+* **Marker Descriptors** - This is a group of Descriptors that are used in place
+  of marker values such as substitution, first order stats etc. Their ID begins
+  with **T**, **F**, **D**, and **R** for Substitution, First Order Stats,
+  Difference Stats and Replacement/Retain, respectively. The other 5 digits are
+  the same as the Element Descriptor they are associated via Bitmap.
+
 Query BUFR Messages
 ^^^^^^^^^^^^^^^^^^^
 Queries can be performed against either the metadata sections (section 0, 1, 2,

@@ -86,13 +86,16 @@ class ValueDataNode(DataNode):
     def __init__(self, descriptor, index):
         super(ValueDataNode, self).__init__(descriptor)
         self.index = index
-        self.attributes = []
 
     def __str__(self):
         return 'V{}'.format(self.index)
 
     def add_attribute(self, attr_node):
-        self.attributes.append(attr_node)
+        # Add attributes field only when it is necessary
+        if not hasattr(self, 'attributes'):
+            self.attributes = [attr_node]
+        else:
+            self.attributes.append(attr_node)
 
 
 # The following types of Node can be attributes

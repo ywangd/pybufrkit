@@ -24,7 +24,8 @@ Find more documentation at http://pybufrkit.readthedocs.io/
 
 Installation
 ------------
-PyBufrKit is compatible with both Python 2.7 and 3.5+. To install from PyPi::
+PyBufrKit is compatible with Python 2.7, 3.5+, and `PyPy https://pypy.org/`_. 
+To install from PyPi::
 
     pip install pybufrkit
 
