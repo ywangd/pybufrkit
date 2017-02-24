@@ -297,7 +297,7 @@ class QueryResult(object):
         self.results[i_subset] = values
 
     def subset_indices(self):
-        return self.results.keys()
+        return list(self.results.keys())
 
     def get_values(self, i_subset, flat=False):
         values = self.results[i_subset]
@@ -307,7 +307,7 @@ class QueryResult(object):
         if flat:
             return [self.get_values(i, flat=True) for i in self.subset_indices()]
         else:
-            return self.results.values()
+            return list(self.results.values())
 
     def __iter__(self):
         return iter(self.results.viewitems())

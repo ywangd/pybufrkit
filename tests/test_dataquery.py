@@ -20,7 +20,7 @@ def read_bufr_file(file_name):
     return s
 
 
-class DecoderTests(unittest.TestCase):
+class DataQueryTests(unittest.TestCase):
     def setUp(self):
         self.decoder = Decoder()
         self.querent = DataQuerent(NodePathParser())
@@ -105,13 +105,13 @@ class DecoderTests(unittest.TestCase):
         r1 = self.querent.query(bufr_message, '/307080/301090/301004/001015')
         assert r1.subset_indices() == list(range(7))
         values = [
-            ['Primda              '],
-            ['Kocelovice          '],
-            ['Praha-Ruzyne        '],
-            ['Liberec             '],
-            ['Pribyslav           '],
-            ['Brno-Turany         '],
-            ['Ostrava-Mosnov      '],
+            [b'Primda              '],
+            [b'Kocelovice          '],
+            [b'Praha-Ruzyne        '],
+            [b'Liberec             '],
+            [b'Pribyslav           '],
+            [b'Brno-Turany         '],
+            [b'Ostrava-Mosnov      '],
         ]
         assert r1.all_values(flat=True) == values
         assert r1.all_values() == values

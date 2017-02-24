@@ -1,6 +1,9 @@
 Python Toolkit for WMO BUFR Messages
 ====================================
 
+.. image:: https://travis-ci.org/ywangd/pybufrkit.svg?branch=master
+    :target: https://travis-ci.org/ywangd/pybufrkit
+
 `PyBufrKit <https://github.com/ywangd/pybufrkit>`_ is a **pure** Python package
 to work with WMO BUFR (FM-94) messages. It can be used as both a
 command line tool or library to decode and encode BUFR messages. Here is a brief
@@ -34,13 +37,14 @@ Command Line Usage
 
 The command line usage of the toolkit takes the following form::
 
-    pybufrkit [OPTIONS] sub-command ...
+    pybufrkit [OPTIONS] command ...
 
-where the ``sub-command`` is one of following actions that can be performed by the tool:
+where the ``command`` is one of following actions that can be performed by the tool:
 
 * ``decode`` - Decode a BUFR file to outputs of various format, e.g. JSON
 * ``encode`` - Encode a BUFR file from a JSON input
 * ``info`` - Decode only the metadata sections (i.e. section 0, 1, 2, 3) of given BUFR files
+* ``split`` - Split given BUFR files into one message per file
 * ``subset`` - Subset the given BUFR file and save as new file
 * ``query`` - Query metadata or data of given BUFR files
 * ``script`` - Embed BUFR query expressions into normal Python script
@@ -70,6 +74,9 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 
 * Decode only the metadata sections of a BUFR file
     ``pybufrkit info BUFR_FILE``
+
+* Split a BUFR file into one message per file
+    ``pybufrkit split BUFR_FILE``
 
 * Subset from a given BUFR file
     ``pybufrkit subset 0,3,6,9 BUFR_FILE``
@@ -123,6 +130,12 @@ The following code shows an example of basic library usage::
     bufr_message_new = encoder.process(json_string)
     with open(BUFR_OUTPUT_FILE, 'wb') as outs:
         outs.write(bufr_message_new.serialized_bytes)
+
+    # Decode for multiple messages from a single file
+    from pybufrkit.decoder import generate_bufr_message
+    with open(SOME_FILE, 'rb') as ins:
+        for bufr_message in generate_bufr_message(decoder, ins.read()):
+            pass  # do something with the decoded message object
 
     # Query the metadata
     from pybufrkit.mdquery import MetadataExprParser, MetadataQuerent

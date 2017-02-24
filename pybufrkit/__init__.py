@@ -51,10 +51,10 @@ def main():
                     help='The directory to locate BUFR tables')
 
     subparsers = ap.add_subparsers(
-        dest='sub_command',
-        title='List of sub-commands',
-        metavar='sub-command',
-        help='Use "{} sub-command -h" for more help on a sub-command'.format(__name__)
+        dest='command',
+        title='List of commands',
+        metavar='command',
+        help='Use "{} command -h" for more help on a command'.format(__name__)
     )
 
     decode_parser = subparsers.add_parser('decode',
@@ -227,35 +227,35 @@ def main():
     )
 
     try:
-        if ns.sub_command == 'decode':
+        if ns.command == 'decode':
             command_decode(ns)
 
-        elif ns.sub_command == 'info':
+        elif ns.command == 'info':
             command_info(ns)
 
-        elif ns.sub_command == 'encode':
+        elif ns.command == 'encode':
             command_encode(ns)
 
-        elif ns.sub_command == 'split':
+        elif ns.command == 'split':
             command_split(ns)
 
-        elif ns.sub_command == 'lookup':
+        elif ns.command == 'lookup':
             command_lookup(ns)
 
-        elif ns.sub_command == 'compile':
+        elif ns.command == 'compile':
             command_compile(ns)
 
-        elif ns.sub_command == 'subset':
+        elif ns.command == 'subset':
             command_subset(ns)
 
-        elif ns.sub_command == 'query':
+        elif ns.command == 'query':
             command_query(ns)
 
-        elif ns.sub_command == 'script':
+        elif ns.command == 'script':
             command_script(ns)
 
         else:
-            print('Unknown sub-command: {}'.format(ns.sub_command))
+            print('Unknown command: {}'.format(ns.command))
 
     except (UnknownDescriptor, BitReadError) as e:
         print(e)
