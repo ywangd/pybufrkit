@@ -11,7 +11,13 @@ import logging
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
-from pybufrkit.constants import *
+from pybufrkit.constants import (BITPOS_START,
+                                 MESSAGE_START_SIGNATURE,
+                                 NBITS_FOR_NBITS_DIFF,
+                                 NBITS_PER_BYTE,
+                                 NUMERIC_MISSING_VALUES,
+                                 PARAMETER_TYPE_TEMPLATE_DATA,
+                                 PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
 from pybufrkit.bitops import get_bit_reader
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData

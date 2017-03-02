@@ -12,7 +12,9 @@ import sys
 import json
 import six
 
-from pybufrkit.constants import *
+from pybufrkit.constants import (UNITS_CODE_TABLE,
+                                 UNITS_COMMON_CODE_TABLE_C1,
+                                 UNITS_FLAG_TABLE)
 from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
 from pybufrkit.decoder import Decoder, generate_bufr_message

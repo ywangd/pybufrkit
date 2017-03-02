@@ -9,7 +9,8 @@ from __future__ import print_function
 import abc
 import six
 
-from pybufrkit.constants import *
+from pybufrkit.constants import (NBITS_PER_BYTE,
+                                 NUMERIC_MISSING_VALUES)
 from pybufrkit.errors import BitReadError
 
 
