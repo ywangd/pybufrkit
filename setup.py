@@ -16,8 +16,6 @@ def get_version():
 
 def get_requirements():
     requirements = ['bitstring>=3.1.3', 'six']
-    if sys.version_info[:2] < (2, 7):
-        requirements.append('argparse>=1.2.1')
     return requirements
 
 
@@ -47,9 +45,9 @@ setup(
         "Intended Audience :: Science/Research",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Utilities",
     ],
     keywords=['BUFR', 'WMO'],
