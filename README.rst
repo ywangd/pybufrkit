@@ -13,7 +13,9 @@ list of some of the features:
 * Handles both compressed and un-compressed messages
 * Handles all practical operator descriptors, including data quality info,
   stats, bitmaps, etc.
-* Convenient subsetting for BUFR messages
+* Option to construct hierarchial structure of a message, e.g. associate
+  first order stats data to their owners.
+* Convenient subsetting support for BUFR messages
 * Comprehensive query support for BUFR messages
 * Script support enables flexible extensions, e.g. filtering through large number of files.
 * Tested with the same set of BUFR files used by
@@ -113,7 +115,9 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 Library Usage
 -------------
 
-The following code shows an example of basic library usage::
+The following code shows an example of basic library usage
+
+.. code-block:: Python
 
     # Decode a BUFR file
     from pybufrkit.decoder import Decoder

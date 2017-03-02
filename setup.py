@@ -1,7 +1,6 @@
 """
 Python toolkit to work with BUFR messages.
 """
-import sys
 import os
 
 from setuptools import setup
