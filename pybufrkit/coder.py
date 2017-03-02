@@ -212,7 +212,7 @@ class CoderState(object):
                 bitmap,
                 self.back_referenced_descriptors
             ) if bit == 0
-            ]
+        ]
         self.next_bitmapped_descriptor = functools.partial(next, iter(self.bitmapped_descriptors))
 
     def _assert_equal_values_of_index(self, idx):

@@ -101,5 +101,3 @@ class NodePathParserTests(unittest.TestCase):
 
         with self.assertRaises(PathExprParsingError):
             self.parser.parse('section_length')
-
-

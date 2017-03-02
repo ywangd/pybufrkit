@@ -121,8 +121,8 @@ class Decoder(Coder):
                 # Zero number of bits means to read all bits till the end of the section
                 parameter.value = bit_reader.read(
                     parameter.type,
-                    section.section_length.value * NBITS_PER_BYTE
-                    - (bit_reader.get_pos() - section.get_metadata(BITPOS_START))
+                    section.section_length.value * NBITS_PER_BYTE -
+                    (bit_reader.get_pos() - section.get_metadata(BITPOS_START))
                 )
             else:
                 parameter.value = bit_reader.read(parameter.type, parameter.nbits)

@@ -196,8 +196,8 @@ class NodePathParser(object):
                                       STATE_START_SUBSET_SLICE_X):
             raise unexpected_char_error(c, self.pos)
 
-        if (c == ']' and self.current_token == ''
-            and self.current_state in (STATE_START_SLICE_0,
+        if (c == ']' and self.current_token == '' and
+            self.current_state in (STATE_START_SLICE_0,
                                        STATE_START_SUBSET_SLICE_0)):
             raise unexpected_char_error(c, self.pos)
 
@@ -649,7 +649,7 @@ class DataQuerent(object):
         return [
             (node if get_node else idx)
             for (idx, node) in sorted(filtered_nodes, key=lambda x: x[0])
-            ]
+        ]
 
     def node_matches(self, node, path_component):
         """

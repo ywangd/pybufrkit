@@ -21,7 +21,7 @@ class TemplateCompilerTests(unittest.TestCase):
         descriptor_ids = [
             x.strip() for x in
             '311001, 222000, 101018, 31031, 1031, 1032, 101018, 33007'.split(',')
-            ]
+        ]
         template = table_group.template_from_ids(*descriptor_ids)
         compiled_template = self.template_compiler.process(template, table_group)
 
