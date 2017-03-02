@@ -146,7 +146,7 @@ class ScriptRunner(object):
         variables = {
             varname: self.get_query_result(bufr_message, query_string)
             for query_string, varname in self.substitutions.items()
-            }
+        }
         variables.update(
             {
                 'PBK_BUFR_MESSAGE': bufr_message,

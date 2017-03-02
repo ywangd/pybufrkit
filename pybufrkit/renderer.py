@@ -13,7 +13,7 @@ from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
-from pybufrkit.constants import *
+from pybufrkit.constants import INDENT_CHARS, PARAMETER_TYPE_TEMPLATE_DATA
 from pybufrkit.errors import UnknownDescriptor
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicationDescriptor,

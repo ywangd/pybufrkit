@@ -14,6 +14,7 @@ associated values signified by operator descriptor 204YYY.
 from __future__ import absolute_import
 from __future__ import print_function
 
+
 class Descriptor(object):
     """
     This class is the base class of all BUFR descriptors. It provides common

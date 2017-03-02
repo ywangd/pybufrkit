@@ -11,7 +11,12 @@ import json
 import logging
 import six
 
-from pybufrkit.constants import *
+from pybufrkit.constants import (BITPOS_START,
+                                 NBITS_FOR_NBITS_DIFF,
+                                 NBITS_PER_BYTE,
+                                 NUMERIC_MISSING_VALUES,
+                                 PARAMETER_TYPE_TEMPLATE_DATA,
+                                 PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
 from pybufrkit.bitops import get_bit_writer
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData

@@ -11,7 +11,13 @@ import logging
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
-from pybufrkit.constants import *
+from pybufrkit.constants import (BITPOS_START,
+                                 MESSAGE_START_SIGNATURE,
+                                 NBITS_FOR_NBITS_DIFF,
+                                 NBITS_PER_BYTE,
+                                 NUMERIC_MISSING_VALUES,
+                                 PARAMETER_TYPE_TEMPLATE_DATA,
+                                 PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
 from pybufrkit.bitops import get_bit_reader
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData
@@ -115,8 +121,8 @@ class Decoder(Coder):
                 # Zero number of bits means to read all bits till the end of the section
                 parameter.value = bit_reader.read(
                     parameter.type,
-                    section.section_length.value * NBITS_PER_BYTE
-                    - (bit_reader.get_pos() - section.get_metadata(BITPOS_START))
+                    section.section_length.value * NBITS_PER_BYTE -
+                    (bit_reader.get_pos() - section.get_metadata(BITPOS_START))
                 )
             else:
                 parameter.value = bit_reader.read(parameter.type, parameter.nbits)

@@ -8,14 +8,13 @@ from __future__ import absolute_import
 
 import json
 import os
-import sys
 import logging
 import six
 from copy import deepcopy
 from collections import OrderedDict
 from datetime import datetime
 
-from pybufrkit.errors import *
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.constants import BASE_DIR, NBITS_PER_BYTE, PARAMETER_TYPE_TEMPLATE_DATA
 from pybufrkit.tables import get_table_group
 

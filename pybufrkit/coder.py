@@ -14,8 +14,11 @@ from collections import namedtuple
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
-from pybufrkit.constants import *
-from pybufrkit.errors import *
+from pybufrkit.constants import (DEFAULT_TABLES_DIR,
+                                 UNITS_CODE_TABLE,
+                                 UNITS_FLAG_TABLE,
+                                 UNITS_STRING)
+from pybufrkit.errors import UnknownDescriptor
 from pybufrkit.bufr import SectionConfigurer
 from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor,
@@ -209,7 +212,7 @@ class CoderState(object):
                 bitmap,
                 self.back_referenced_descriptors
             ) if bit == 0
-            ]
+        ]
         self.next_bitmapped_descriptor = functools.partial(next, iter(self.bitmapped_descriptors))
 
     def _assert_equal_values_of_index(self, idx):

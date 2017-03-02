@@ -59,10 +59,12 @@ def test_unexpanded_descriptors():
         202129, 11012, 202000, 13090, 13091
     ]
 
+
 def test_stripping_whites():
     s = read_bufr_file('jaso_214.bufr')
     bufr_message = decoder.process(s)
     assert md_querent.query(bufr_message, '   %length  ') == 5004
+
 
 def test_non_exist_metadata():
     s = read_bufr_file('jaso_214.bufr')

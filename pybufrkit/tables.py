@@ -23,7 +23,6 @@ create a BufrMessage object.
 """
 from __future__ import absolute_import
 import os
-import sys
 import json
 import logging
 import functools

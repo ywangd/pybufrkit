@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import os
 import unittest
 
 from pybufrkit.renderer import FlatTextRenderer

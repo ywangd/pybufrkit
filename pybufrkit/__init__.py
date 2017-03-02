@@ -18,8 +18,19 @@ import argparse
 import logging
 import sys
 
-from pybufrkit.commands import *
-from pybufrkit.errors import *
+from pybufrkit.commands import (command_compile,
+                                command_decode,
+                                command_encode,
+                                command_info,
+                                command_lookup,
+                                command_query,
+                                command_script,
+                                command_split,
+                                command_subset)
+from pybufrkit.errors import (BitReadError,
+                              PathExprParsingError,
+                              QueryError,
+                              UnknownDescriptor)
 
 __version__ = '0.2.2'
 __author__ = 'ywangd@gmail.com'

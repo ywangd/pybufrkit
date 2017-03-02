@@ -16,11 +16,12 @@ import functools
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
-from pybufrkit.descriptors import (ElementDescriptor, FixedReplicationDescriptor,
-                                   DelayedReplicationDescriptor, OperatorDescriptor,
-                                   SequenceDescriptor, AssociatedDescriptor,
-                                   SkippedLocalDescriptor,
-                                   MarkerDescriptor)
+from pybufrkit.descriptors import (ElementDescriptor,
+                                   FixedReplicationDescriptor,
+                                   DelayedReplicationDescriptor,
+                                   OperatorDescriptor,
+                                   SequenceDescriptor,
+                                   SkippedLocalDescriptor)
 
 
 class DataNode(object):

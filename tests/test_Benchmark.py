@@ -24,3 +24,4 @@ class BenchMarkTests(unittest.TestCase):
             with open(os.path.join(DATA_DIR, filename), 'rb') as ins:
                 print(filename)
                 bufr_message = self.decoder.process(ins.read(), wire_template_data=True)
+                self.assertIsNotNone(bufr_message)
