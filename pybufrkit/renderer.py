@@ -204,11 +204,115 @@ class FlatJsonRenderer(Renderer):
 
 
 class NestedJsonRenderer(Renderer):
+    """
+    The counterpart to NestedTextRenderer but with JSON as output
+    """
+
+    def _render_bufr_message(self, bufr_message):
+        data = []
+        for section in bufr_message.sections:
+            section_data = []
+            for parameter in section:
+                if parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
+                    section_data.append(json.loads(self._render_template_data(parameter.value)))
+                else:
+                    section_data.append(parameter.value)
+            data.append(section_data)
+
+        return json.dumps(data, encoding='latin-1')
+
+    def _render_template_data(self, template_data):
+        ret = []
+        for idx_subset in range(template_data.n_subsets):
+            ret.extend(
+                self._render_template_data_nodes(
+                    template_data.decoded_nodes_all_subsets[idx_subset],
+                    template_data.decoded_descriptors_all_subsets[idx_subset],
+                    template_data.decoded_values_all_subsets[idx_subset],
+                )
+            )
+        return json.dumps(ret, encoding='latin-1')
+
     def _render_query_result(self, query_result):
         ret = OrderedDict()
         for idx_subset in query_result.subset_indices():
             ret[idx_subset] = query_result.get_values(idx_subset)
         return json.dumps(ret, encoding='latin-1')
+
+    def _render_template_data_nodes(self, decoded_nodes, decoded_descriptors, decoded_values):
+        ret = []
+        for decoded_node in decoded_nodes:
+            if isinstance(decoded_node, NoValueDataNode):
+                n = {'id': str(decoded_node.descriptor),
+                     'description': str(decoded_node)}
+
+                if isinstance(decoded_node, SequenceNode):
+                    n['members'] = self._render_template_data_nodes(
+                        decoded_node.members, decoded_descriptors, decoded_values,
+                    )
+
+                elif isinstance(decoded_node, (FixedReplicationNode, DelayedReplicationNode)):
+                    if isinstance(decoded_node, FixedReplicationNode):
+                        n_repeats = decoded_node.descriptor.n_repeats
+                    else:
+                        n_repeats = decoded_values[decoded_node.factor.index]
+                        n['factor'] = self._render_template_data_value_node(
+                            decoded_node.factor, decoded_descriptors, decoded_values,
+                        )
+
+                    # Get actual number of members instead of number of items which is
+                    # calculated from the descriptor ID. When the structure is fully
+                    # nested. The number from the descriptor ID is no longer accurate.
+                    n_members = decoded_node.descriptor.n_members
+
+                    n['members'] = []
+                    for ir in range(n_repeats):
+                        n['members'].append(
+                            self._render_template_data_nodes(
+                                decoded_node.members[ir * n_members: (ir + 1) * n_members],
+                                decoded_descriptors, decoded_values,
+                            )
+                        )
+
+            else:  # ValueNode
+                n = self._render_template_data_value_node(
+                    decoded_node, decoded_descriptors, decoded_values
+                )
+
+            ret.append(n)
+
+        return ret
+
+    def _render_template_data_value_node(self, decoded_node, decoded_descriptors, decoded_values,
+                                         is_attribute=False):
+        descriptor = decoded_descriptors[decoded_node.index]
+        value = decoded_values[decoded_node.index]
+        if isinstance(descriptor, MarkerDescriptor):
+            description = '{:06d}'.format(descriptor.marker_id)
+        elif hasattr(descriptor, 'name'):
+            description = descriptor.name
+        else:
+            description = decoded_node.__class__.__name__[:-8]
+
+        ret = {'id': str(descriptor), 'description': description, 'value': value}
+        if is_attribute:
+            ret['virtual'] = True
+        if hasattr(decoded_node, 'attributes'):
+            ret['attributes'] = self._render_template_data_attributed_node(
+                decoded_node, decoded_descriptors, decoded_values
+            )
+
+        return ret
+
+    def _render_template_data_attributed_node(self, decoded_node, decoded_descriptors, decoded_values):
+        ret = []
+        for attr_node in decoded_node.attributes:
+            ret.append(
+                self._render_template_data_value_node(
+                    attr_node, decoded_descriptors, decoded_values, is_attribute=True
+                )
+            )
+        return ret
 
 
 class NestedTextRenderer(Renderer):

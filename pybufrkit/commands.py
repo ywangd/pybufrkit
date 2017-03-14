@@ -38,11 +38,15 @@ def command_decode(ns):
     def show_message(m):
         if ns.attributed:
             m.wire()
-            print(NestedTextRenderer().render(m))
-        elif ns.json:
-            print(FlatJsonRenderer().render(m))
+            if ns.json:
+                print(NestedJsonRenderer().render(m))
+            else:
+                print(NestedTextRenderer().render(m))
         else:
-            print(FlatTextRenderer().render(m))
+            if ns.json:
+                print(FlatJsonRenderer().render(m))
+            else:
+                print(FlatTextRenderer().render(m))
 
     for filename in ns.filenames:
         with open(filename, 'rb') as ins:
