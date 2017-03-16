@@ -5,6 +5,7 @@ pybufrkit.bufr
 Classes for representing a BUFR message and its components.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 
 import json
 import os
@@ -359,7 +360,7 @@ class BufrMessage(object):
         self.template_data.value.wire()
 
     def subset(self, subset_indices):
-        if max(subset_indices) >= len(subset_indices):
+        if max(subset_indices) >= self.n_subsets.value:
             raise PyBufrKitError('maximum subset index out of range')
         if min(subset_indices) < 0:
             raise PyBufrKitError('minimum subset index out of range')

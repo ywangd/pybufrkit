@@ -30,9 +30,9 @@ from pybufrkit.commands import (command_compile,
 from pybufrkit.errors import (BitReadError,
                               PathExprParsingError,
                               QueryError,
-                              UnknownDescriptor)
+                              UnknownDescriptor, PyBufrKitError)
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -99,6 +99,8 @@ def main():
                                metavar='output_file',
                                nargs='?', default='out.bufr',
                                help='The output BUFR file, default out.bufr')
+    encode_parser.add_argument('-a', '--attributed', action='store_true',
+                               help='The input JSON takes the nested and attributed format')
     encode_parser.add_argument('--compiled-template-cache-max',
                                type=int,
                                help='The maximum number of compiled templates to cache. '
@@ -273,6 +275,9 @@ def main():
         print(e)
 
     except (PathExprParsingError, QueryError) as e:
+        print(e)
+
+    except PyBufrKitError as e:
         print(e)
 
     except IOError as e:

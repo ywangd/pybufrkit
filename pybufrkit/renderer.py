@@ -213,10 +213,12 @@ class NestedJsonRenderer(Renderer):
         for section in bufr_message.sections:
             section_data = []
             for parameter in section:
+                parameter_data = {'name': parameter.name}
                 if parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
-                    section_data.append(json.loads(self._render_template_data(parameter.value)))
+                    parameter_data['value'] = json.loads(self._render_template_data(parameter.value))
                 else:
-                    section_data.append(parameter.value)
+                    parameter_data['value'] = parameter.value
+                section_data.append(parameter_data)
             data.append(section_data)
 
         return json.dumps(data, encoding='latin-1')
@@ -224,7 +226,7 @@ class NestedJsonRenderer(Renderer):
     def _render_template_data(self, template_data):
         ret = []
         for idx_subset in range(template_data.n_subsets):
-            ret.extend(
+            ret.append(
                 self._render_template_data_nodes(
                     template_data.decoded_nodes_all_subsets[idx_subset],
                     template_data.decoded_descriptors_all_subsets[idx_subset],
@@ -273,6 +275,8 @@ class NestedJsonRenderer(Renderer):
                                 decoded_descriptors, decoded_values,
                             )
                         )
+                # Nested JSON contains no value node that also has no members,
+                # e.g. certain operator descriptors
 
             else:  # ValueNode
                 n = self._render_template_data_value_node(
@@ -292,10 +296,10 @@ class NestedJsonRenderer(Renderer):
         elif hasattr(descriptor, 'name'):
             description = descriptor.name
         else:
-            description = decoded_node.__class__.__name__[:-8]
+            description = decoded_node.__class__.__name__[:-4]
 
         ret = {'id': str(descriptor), 'description': description, 'value': value}
-        if is_attribute:
+        if is_attribute and not isinstance(descriptor, AssociatedDescriptor):
             ret['virtual'] = True
         if hasattr(decoded_node, 'attributes'):
             ret['attributes'] = self._render_template_data_attributed_node(
@@ -419,7 +423,7 @@ class NestedTextRenderer(Renderer):
         elif hasattr(descriptor, 'name'):
             description = descriptor.name
         else:
-            description = decoded_node.__class__.__name__[:-8]
+            description = decoded_node.__class__.__name__[:-4]
 
         ret = [
             '{}{}{} {} {!r}'.format(

@@ -18,6 +18,7 @@ from pybufrkit.constants import (BITPOS_START,
                                  PARAMETER_TYPE_TEMPLATE_DATA,
                                  PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
 from pybufrkit.bitops import get_bit_writer
+from pybufrkit.utils import nested_json_to_flat_json
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData
 from pybufrkit.descriptors import Descriptor
@@ -68,13 +69,14 @@ class Encoder(Coder):
         else:
             self.compiled_template_manager = None
 
-    def process(self, s, file_path='<string>', wire_template_data=True):
+    def process(self, s, file_path='<string>', is_nested_json=False, wire_template_data=True):
         """
         Entry point for the encoding process. The process encodes a JSON format
         message to BUFR message.
 
         :param s: A JSON or its string serialized form
         :param file_path: The file path to the JSON file.
+        :param is_nested_json: Whether the input string has the nested JSON format
         :param wire_template_data: Whether to wire the template data to construct
             a fully hierarchical structure from the flat lists.
 
@@ -87,9 +89,8 @@ class Encoder(Coder):
         else:
             json_data = s
 
-        return self.process_json(json_data, file_path=file_path, wire_template_data=wire_template_data)
-
-    def process_json(self, json_data, file_path='<string>', wire_template_data=True):
+        if is_nested_json:
+            json_data = nested_json_to_flat_json(json_data)
 
         bit_writer = get_bit_writer()
         bufr_message = BufrMessage(filename=file_path)

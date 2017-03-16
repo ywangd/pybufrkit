@@ -112,7 +112,9 @@ def command_encode(ns):
             s = ins.read()
     else:  # read from stdin, this is useful for piping
         s = sys.stdin.read()
+
     bufr_message = encoder.process(s, '<stdin>' if ns.json_filename else ns.json_filename,
+                                   is_nested_json=ns.attributed,
                                    wire_template_data=False)
     if ns.output_filename:
         with open(ns.output_filename, 'wb') as outs:
@@ -225,7 +227,7 @@ def command_subset(ns):
                                    ignore_value_expectation=ns.ignore_value_expectation)
 
     data = bufr_message.subset(subset_indices)
-    nb = encoder.process_json(data, file_path=ns.output_filename, wire_template_data=False)
+    nb = encoder.process(data, file_path=ns.output_filename, wire_template_data=False)
 
     with open(ns.output_filename, 'wb') as outs:
         outs.write(nb.serialized_bytes)
