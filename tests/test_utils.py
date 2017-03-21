@@ -1,9 +1,8 @@
 import os
-import json
 
-from pybufrkit.utils import nested_json_to_flat_json
 from pybufrkit.decoder import Decoder
 from pybufrkit.renderer import FlatJsonRenderer, NestedJsonRenderer
+from pybufrkit.utils import nested_json_to_flat_json
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -26,7 +25,7 @@ def test_nested_json_to_flat_json_1():
     nested = nested_json_renderer.render(bufr_message)
     flat = flat_json_renderer.render(bufr_message)
 
-    assert flat == json.dumps(nested_json_to_flat_json(json.loads(nested)))
+    assert flat == nested_json_to_flat_json(nested)
 
 
 def test_nested_json_to_flat_json_2():
@@ -35,4 +34,4 @@ def test_nested_json_to_flat_json_2():
     nested = nested_json_renderer.render(bufr_message)
     flat = flat_json_renderer.render(bufr_message)
 
-    assert flat == json.dumps(nested_json_to_flat_json(json.loads(nested)))
+    assert flat == nested_json_to_flat_json(nested)

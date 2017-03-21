@@ -19,6 +19,7 @@ from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
 from pybufrkit.decoder import Decoder, generate_bufr_message
 from pybufrkit.encoder import Encoder
+from pybufrkit.utils import JSON_DUMPS_KWARGS
 from pybufrkit.renderer import FlatTextRenderer, NestedTextRenderer, FlatJsonRenderer, NestedJsonRenderer
 
 __all__ = ['command_decode', 'command_info', 'command_encode',
@@ -39,12 +40,12 @@ def command_decode(ns):
         if ns.attributed:
             m.wire()
             if ns.json:
-                print(NestedJsonRenderer().render(m))
+                print(json.dumps(NestedJsonRenderer().render(m), **JSON_DUMPS_KWARGS))
             else:
                 print(NestedTextRenderer().render(m))
         else:
             if ns.json:
-                print(FlatJsonRenderer().render(m))
+                print(json.dumps(FlatJsonRenderer().render(m), **JSON_DUMPS_KWARGS))
             else:
                 print(FlatTextRenderer().render(m))
 
@@ -261,9 +262,9 @@ def command_query(ns):
             query_result = querent.query(bufr_message, ns.query_string)
             if ns.json:
                 if ns.nested:
-                    print(NestedJsonRenderer().render(query_result))
+                    print(json.dumps(NestedJsonRenderer().render(query_result), **JSON_DUMPS_KWARGS))
                 else:
-                    print(FlatJsonRenderer().render(query_result))
+                    print(json.dumps(FlatJsonRenderer().render(query_result), **JSON_DUMPS_KWARGS))
             else:
                 print(filename)
                 print(FlatTextRenderer().render(query_result))

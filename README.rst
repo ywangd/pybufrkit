@@ -127,12 +127,12 @@ The following code shows an example of basic library usage
 
     # Convert the BUFR message to JSON
     from pybufrkit.renderer import FlatJsonRenderer
-    json_string = FlatJsonRenderer().render(bufr_message)
+    json_data = FlatJsonRenderer().render(bufr_message)
 
     # Encode the JSON back to BUFR file
     from pybufrkit.encoder import Encoder
     encoder = Encoder()
-    bufr_message_new = encoder.process(json_string)
+    bufr_message_new = encoder.process(json_data)
     with open(BUFR_OUTPUT_FILE, 'wb') as outs:
         outs.write(bufr_message_new.serialized_bytes)
 

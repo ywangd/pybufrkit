@@ -1,5 +1,24 @@
+"""
+pybufrkit.utils
+~~~~~~~~~~~~~~~
+"""
 from __future__ import absolute_import
 from __future__ import print_function
+
+import json
+import six
+
+
+# Encode bytes as string for Python 3
+class EntityEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, six.binary_type):
+            return o.decode(encoding='latin-1')
+
+        return json.JSONEncoder.default(self, o)
+
+
+JSON_DUMPS_KWARGS = {'encoding': 'latin-1'} if six.PY2 else {'cls': EntityEncoder}
 
 
 def nested_json_to_flat_json(nested_json_data):

@@ -7,10 +7,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import abc
-import json
 from collections import OrderedDict
 
-import six
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
@@ -24,18 +22,6 @@ from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicati
 from pybufrkit.templatedata import (TemplateData, NoValueDataNode, SequenceNode,
                                     FixedReplicationNode, DelayedReplicationNode)
 from pybufrkit.dataquery import QueryResult
-
-
-# Encode bytes as string for Python 3
-class EntityEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, six.binary_type):
-            return o.decode(encoding='latin-1')
-
-        return json.JSONEncoder.default(self, o)
-
-
-JSON_DUMPS_KWARGS = {'encoding': 'latin-1'} if six.PY2 else {'cls': EntityEncoder}
 
 
 class Renderer(object):
@@ -196,15 +182,15 @@ class FlatJsonRenderer(Renderer):
             section_data = []
             for parameter in section:
                 if parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
-                    section_data.append(json.loads(self._render_template_data(parameter.value)))
+                    section_data.append(self._render_template_data(parameter.value))
                 else:
                     section_data.append(parameter.value)
             data.append(section_data)
 
-        return json.dumps(data, **JSON_DUMPS_KWARGS)
+        return data
 
     def _render_template_data(self, template_data):
-        return json.dumps(template_data.decoded_values_all_subsets, **JSON_DUMPS_KWARGS)
+        return template_data.decoded_values_all_subsets
 
     def _render_descriptor(self, descriptor):
         raise NotImplementedError()
@@ -213,7 +199,7 @@ class FlatJsonRenderer(Renderer):
         ret = OrderedDict()
         for idx_subset in query_result.subset_indices():
             ret[idx_subset] = query_result.get_values(idx_subset, flat=True)
-        return json.dumps(ret, **JSON_DUMPS_KWARGS)
+        return ret
 
 
 class NestedJsonRenderer(Renderer):
@@ -228,13 +214,14 @@ class NestedJsonRenderer(Renderer):
             for parameter in section:
                 parameter_data = {'name': parameter.name}
                 if parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
-                    parameter_data['value'] = json.loads(self._render_template_data(parameter.value))
+                    parameter_data['value'] = self._render_template_data(parameter.value)
                 else:
                     parameter_data['value'] = parameter.value
                 section_data.append(parameter_data)
             data.append(section_data)
 
-        return json.dumps(data, **JSON_DUMPS_KWARGS)
+        # return data
+        return data
 
     def _render_template_data(self, template_data):
         ret = []
@@ -246,13 +233,13 @@ class NestedJsonRenderer(Renderer):
                     template_data.decoded_values_all_subsets[idx_subset],
                 )
             )
-        return json.dumps(ret, **JSON_DUMPS_KWARGS)
+        return ret
 
     def _render_query_result(self, query_result):
         ret = OrderedDict()
         for idx_subset in query_result.subset_indices():
             ret[idx_subset] = query_result.get_values(idx_subset)
-        return json.dumps(ret, **JSON_DUMPS_KWARGS)
+        return ret
 
     def _render_template_data_nodes(self, decoded_nodes, decoded_descriptors, decoded_values):
         ret = []
