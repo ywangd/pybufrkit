@@ -72,8 +72,8 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 * Encode a JSON file to BUFR
     ``pybufrkit encode JSON_FILE BUFR_FILE``
 
-* Decode a BUFR file to JSON, pipe it to the encoder to encode it back to BUFR
-    ``pybufrkit decode -j BUFR_FILE | pybufrkit encode -``
+* Decode a BUFR file, pipe it to the encoder to encode it back to BUFR
+    ``pybufrkit decode BUFR_FILE | pybufrkit encode -``
 
 * Decode only the metadata sections of a BUFR file
     ``pybufrkit info BUFR_FILE``

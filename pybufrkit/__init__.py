@@ -92,15 +92,17 @@ def main():
 
     encode_parser = subparsers.add_parser('encode',
                                           help='Encode given JSON file to BUFR')
-    encode_parser.add_argument('json_filename',
-                               metavar='json_file',
-                               help='The JSON input file')
+    encode_parser.add_argument('filename',
+                               metavar='input',
+                               help='The input file')
     encode_parser.add_argument('output_filename',
                                metavar='output_file',
                                nargs='?', default='out.bufr',
                                help='The output BUFR file, default out.bufr')
+    encode_parser.add_argument('-j', '--json', action='store_true',
+                               help='The input is in JSON format')
     encode_parser.add_argument('-a', '--attributed', action='store_true',
-                               help='The input JSON takes the nested and attributed format')
+                               help='The input takes nested and attributed format')
     encode_parser.add_argument('--compiled-template-cache-max',
                                type=int,
                                help='The maximum number of compiled templates to cache. '

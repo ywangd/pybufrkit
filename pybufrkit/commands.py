@@ -15,6 +15,7 @@ import six
 from pybufrkit.constants import (UNITS_CODE_TABLE,
                                  UNITS_COMMON_CODE_TABLE_C1,
                                  UNITS_FLAG_TABLE)
+from pybufrkit.utils import nested_json_to_flat_json, flat_text_to_flat_json
 from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
 from pybufrkit.decoder import Decoder, generate_bufr_message
@@ -108,14 +109,23 @@ def command_encode(ns):
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
-    if ns.json_filename != '-':
-        with open(ns.json_filename) as ins:
+    if ns.filename != '-':
+        with open(ns.filename) as ins:
             s = ins.read()
     else:  # read from stdin, this is useful for piping
         s = sys.stdin.read()
 
-    bufr_message = encoder.process(s, '<stdin>' if ns.json_filename else ns.json_filename,
-                                   is_nested_json=ns.attributed,
+    if ns.json:
+        data = json.loads(s)
+        if ns.attributed:
+            data = nested_json_to_flat_json(data)
+    else:
+        if ns.attributed:
+            raise NotImplementedError('Encoded from nested text output is not supported')
+        else:
+            data = flat_text_to_flat_json(s)
+
+    bufr_message = encoder.process(data, '<stdin>' if ns.filename else ns.filename,
                                    wire_template_data=False)
     if ns.output_filename:
         with open(ns.output_filename, 'wb') as outs:

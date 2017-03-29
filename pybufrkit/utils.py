@@ -5,6 +5,7 @@ pybufrkit.utils
 from __future__ import absolute_import
 from __future__ import print_function
 
+import ast
 import json
 import six
 
@@ -81,3 +82,67 @@ def template_data_nested_json_to_flat_json(template_data_value):
         data_all_subsets.append(flat_subset_data)
 
     return data_all_subsets
+
+
+FLAT_TEXT_SECTION_HEADER = '<<<<<<'
+FLAT_TEXT_SUBSET_HEADER = '######'
+
+
+def flat_text_to_flat_json(flat_text):
+    """
+    Convert the flat Text output to the flat JSON output format
+    
+    :param str flat_text: The flat text output
+    """
+    flat_json = []
+    # Skip the first line of table group key info
+    lines = flat_text.splitlines()[1:]
+    idxline = 0
+    while idxline < len(lines):
+        idxline, section_data = section_flat_text_to_flat_json(lines, idxline)
+        flat_json.append(section_data)
+
+    return flat_json
+
+
+def section_flat_text_to_flat_json(lines, idxline):
+    """
+    Convert a section from the flat text output to a section of flat JSON.
+    """
+    section_data = []
+    idxline += 1  # skip the section header
+    while idxline < len(lines):
+        line = lines[idxline]
+        if line.startswith(FLAT_TEXT_SECTION_HEADER):
+            break
+        if line.startswith(FLAT_TEXT_SUBSET_HEADER):
+            idxline, data_all_subsets = subsets_flat_text_to_flat_json(lines, idxline)
+            section_data.append(data_all_subsets)
+            continue
+        parameter_name, value = line.split(' = ')
+        section_data.append(ast.literal_eval(value))
+        idxline += 1
+
+    return idxline, section_data
+
+
+def subsets_flat_text_to_flat_json(lines, idxline):
+    """
+    Convert all subsets data from flat text output to all subsets data of flat JSON.
+    """
+    data_all_subsets = []
+    while True:
+        line = lines[idxline]
+        if line.startswith(FLAT_TEXT_SECTION_HEADER):
+            break
+        if line.startswith(FLAT_TEXT_SUBSET_HEADER):
+            data_all_subsets.append([])
+            idxline += 1
+            continue
+        value = ast.literal_eval(line[81:])
+        if isinstance(value, tuple):
+            value = value[0]
+        data_all_subsets[-1].append(value)
+        idxline += 1
+
+    return idxline, data_all_subsets
