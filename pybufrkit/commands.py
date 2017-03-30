@@ -15,7 +15,8 @@ import six
 from pybufrkit.constants import (UNITS_CODE_TABLE,
                                  UNITS_COMMON_CODE_TABLE_C1,
                                  UNITS_FLAG_TABLE)
-from pybufrkit.utils import nested_json_to_flat_json, flat_text_to_flat_json
+from pybufrkit.errors import PyBufrKitError
+from pybufrkit.utils import nested_json_to_flat_json, flat_text_to_flat_json, nested_text_to_flat_json
 from pybufrkit.descriptors import ElementDescriptor
 from pybufrkit.tables import get_table_group
 from pybufrkit.decoder import Decoder, generate_bufr_message
@@ -115,15 +116,26 @@ def command_encode(ns):
     else:  # read from stdin, this is useful for piping
         s = sys.stdin.read()
 
-    if ns.json:
-        data = json.loads(s)
-        if ns.attributed:
-            data = nested_json_to_flat_json(data)
-    else:
-        if ns.attributed:
-            raise NotImplementedError('Encoded from nested text output is not supported')
+    messages = {
+        (True, True): 'Nested JSON',
+        (True, False): 'Nested Text',
+        (False, True): 'Flat JSON',
+        (False, False): 'Flat Text',
+    }
+    try:
+        if ns.json:
+            data = json.loads(s)
+            if ns.attributed:
+                data = nested_json_to_flat_json(data)
         else:
-            data = flat_text_to_flat_json(s)
+            if ns.attributed:
+                data = nested_text_to_flat_json(s)
+            else:
+                data = flat_text_to_flat_json(s)
+    except (ValueError, SyntaxError) as e:
+        raise PyBufrKitError('Invalid input: Is it in {} format?'.format(
+            messages[(ns.attributed, ns.json)]
+        ))
 
     bufr_message = encoder.process(data, '<stdin>' if ns.filename else ns.filename,
                                    wire_template_data=False)

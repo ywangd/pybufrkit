@@ -84,8 +84,8 @@ def template_data_nested_json_to_flat_json(template_data_value):
     return data_all_subsets
 
 
-FLAT_TEXT_SECTION_HEADER = '<<<<<<'
-FLAT_TEXT_SUBSET_HEADER = '######'
+TEXT_SECTION_HEADER = '<<<<<<'
+TEXT_SUBSET_HEADER = '######'
 
 
 def flat_text_to_flat_json(flat_text):
@@ -113,9 +113,9 @@ def section_flat_text_to_flat_json(lines, idxline):
     idxline += 1  # skip the section header
     while idxline < len(lines):
         line = lines[idxline]
-        if line.startswith(FLAT_TEXT_SECTION_HEADER):
+        if line.startswith(TEXT_SECTION_HEADER):
             break
-        if line.startswith(FLAT_TEXT_SUBSET_HEADER):
+        if line.startswith(TEXT_SUBSET_HEADER):
             idxline, data_all_subsets = subsets_flat_text_to_flat_json(lines, idxline)
             section_data.append(data_all_subsets)
             continue
@@ -133,16 +133,95 @@ def subsets_flat_text_to_flat_json(lines, idxline):
     data_all_subsets = []
     while True:
         line = lines[idxline]
-        if line.startswith(FLAT_TEXT_SECTION_HEADER):
+        if line.startswith(TEXT_SECTION_HEADER):
             break
-        if line.startswith(FLAT_TEXT_SUBSET_HEADER):
+        if line.startswith(TEXT_SUBSET_HEADER):
             data_all_subsets.append([])
             idxline += 1
             continue
-        value = ast.literal_eval(line[81:])
+        value = ast.literal_eval(line[81:].strip())
         if isinstance(value, tuple):
             value = value[0]
         data_all_subsets[-1].append(value)
         idxline += 1
 
+    return idxline, data_all_subsets
+
+
+def nested_text_to_flat_json(nested_text):
+    """
+    Convert string in nested text format to a flat JSON object.
+    :param str nested_text: The nested text output 
+    :return: A flat JSON object
+    """
+    flat_json = []
+    # Skip the first line of table group key info
+    lines = nested_text.splitlines()[1:]
+    idxline = 0
+    while idxline < len(lines):
+        idxline, section_data = section_nested_text_to_flat_json(lines, idxline)
+        flat_json.append(section_data)
+
+    return flat_json
+
+
+def section_nested_text_to_flat_json(lines, idxline):
+    """
+    Convert a section from the flat text output to a section of flat JSON.
+    """
+    section_data = []
+    idxline += 1  # skip the section header
+    while idxline < len(lines):
+        line = lines[idxline]
+        if line.startswith(TEXT_SECTION_HEADER):
+            break
+        if line.startswith(TEXT_SUBSET_HEADER):
+            idxline, data_all_subsets = subsets_nested_text_to_flat_json(lines, idxline)
+            section_data.append(data_all_subsets)
+            continue
+        parameter_name, value = line.split(' = ')
+        section_data.append(ast.literal_eval(value))
+        idxline += 1
+
+    return idxline, section_data
+
+
+def subsets_nested_text_to_flat_json(lines, idxline):
+    """
+    Convert all subsets data from nested text format to flat JSON format.
+    """
+    data_all_subsets = []
+    while True:
+        line = lines[idxline].strip()
+        if line.startswith(TEXT_SECTION_HEADER):
+            break
+        if line.startswith(TEXT_SUBSET_HEADER):
+            data_all_subsets.append([])
+            idxline += 1
+            continue
+        # Skip comments (replication header), attributed fields and Sequence descriptors
+        if line.startswith('#') \
+                or (line.startswith('->') and not line.startswith('-> A')) \
+                or line.startswith('3'):
+            idxline += 1
+            continue
+
+        # Entries with no values, e.g. 204YYY, 1XXYYY
+        if ' ' not in line:
+            idxline += 1
+            continue
+
+        line_trailing_char = line[-1]
+        if line_trailing_char not in ('"', "'"):
+            value = ast.literal_eval(line.rsplit(' ', 1)[1])
+        else:
+            idxval = line.rfind(' ' + line_trailing_char, 0, len(line) - 1)
+            value = ast.literal_eval(line[idxval + 1:])
+
+        # Insert associated field before the owner field
+        if line.startswith('-> A'):
+            data_all_subsets[-1].insert(-1, value)
+        else:
+            data_all_subsets[-1].append(value)
+        idxline += 1
     return idxline, data_all_subsets

@@ -30,9 +30,10 @@ from pybufrkit.commands import (command_compile,
 from pybufrkit.errors import (BitReadError,
                               PathExprParsingError,
                               QueryError,
-                              UnknownDescriptor, PyBufrKitError)
+                              UnknownDescriptor,
+                              PyBufrKitError)
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -78,7 +79,7 @@ def main():
                                help='Output as JSON')
     decode_parser.add_argument('-a', '--attributed',
                                action='store_true',
-                               help='Wire data to set attributes')
+                               help='Wire data to be attributed and nested')
     decode_parser.add_argument('-m', '--multiple-messages',
                                action='store_true',
                                help='Each given file could have one or more messages')
