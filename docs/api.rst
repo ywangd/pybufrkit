@@ -51,6 +51,9 @@ API reference
 .. automodule:: pybufrkit.commands
     :members:
 
+.. automodule:: pybufrkit.utils
+    :members:
+
 .. automodule:: pybufrkit.constants
     :members:
 

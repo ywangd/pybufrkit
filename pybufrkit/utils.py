@@ -215,7 +215,8 @@ def subsets_nested_text_to_flat_json(lines, idxline):
         if line_trailing_char not in ('"', "'"):
             value = ast.literal_eval(line.rsplit(' ', 1)[1])
         else:
-            idxval = line.rfind(' ' + line_trailing_char, 0, len(line) - 1)
+            string_left_bound = (' ' if six.PY2 else ' b') + line_trailing_char
+            idxval = line.rfind(string_left_bound, 0, len(line) - 1)
             value = ast.literal_eval(line[idxval + 1:])
 
         # Insert associated field before the owner field
