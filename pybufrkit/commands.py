@@ -132,7 +132,7 @@ def command_encode(ns):
                 data = nested_text_to_flat_json(s)
             else:
                 data = flat_text_to_flat_json(s)
-    except (ValueError, SyntaxError) as e:
+    except (ValueError, SyntaxError):
         raise PyBufrKitError('Invalid input: Is it in {} format?'.format(
             messages[(ns.attributed, ns.json)]
         ))
