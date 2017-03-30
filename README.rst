@@ -58,59 +58,62 @@ Here are a few examples using the tool from command line. For more details, plea
 to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
 `documentation <http://pybufrkit.readthedocs.io/>`_.
 
-* Decode a BUFR file
-    ``pybufrkit decode BUFR_FILE``
+.. code-block:: Bash
 
-* Decode a BUFR file and display it as a hierarchical structure corresponding to
-  the BUFR Descriptors. In addition, the attribute descriptors are associated to
-  their (bitmap) corresponding descriptors.
-    ``pybufrkit decode -a BUFR_FILE``
+    # Decode a BUFR file and output in the default flat text format
+    pybufrkit decode BUFR_FILE
 
-* Decode a BUFR file and convert to JSON format (the JSON can be encoded back to the BUFR format)
-    ``pybufrkit decode -j BUFR_FILE``
-    
-* Encode a JSON file to BUFR
-    ``pybufrkit encode JSON_FILE BUFR_FILE``
+    # Decode a BUFR file and display it in a hierarchical structure
+    # corresponding to the BUFR Descriptors. In addition, the attribute
+    # descriptors are associated to their (bitmap) corresponding descriptors.
+    pybufrkit decode -a BUFR_FILE
 
-* Decode a BUFR file, pipe it to the encoder to encode it back to BUFR
-    ``pybufrkit decode BUFR_FILE | pybufrkit encode -``
+    # Decode a BUFR file and output in the flat JSON format
+    pybufrkit decode -j BUFR_FILE
 
-* Decode only the metadata sections of a BUFR file
-    ``pybufrkit info BUFR_FILE``
+    # Encode from a flat JSON file to BUFR
+    pybufrkit encode -j JSON_FILE BUFR_FILE
 
-* Split a BUFR file into one message per file
-    ``pybufrkit split BUFR_FILE``
+    # Decode a BUFR file, pipe it to the encoder to encode it back to BUFR
+    pybufrkit decode BUFR_FILE | pybufrkit encode -
 
-* Subset from a given BUFR file
-    ``pybufrkit subset 0,3,6,9 BUFR_FILE``
+    # Decode only the metadata sections of a BUFR file
+    pybufrkit info BUFR_FILE
 
-* Query values from the metadata sections (section 0, 1, 2, 3):
-    ``pybufrkit query %n_subsets BUFR_FILE``
+    # Split a BUFR file into one message per file
+    pybufrkit split BUFR_FILE
 
-* Query all values for descriptor 001002 of the data section
-    ``pybufrkit query 001002 BUFR_FILE``
+    # Subset from a given BUFR file
+    pybufrkit subset 0,3,6,9 BUFR_FILE
 
-* Query for those root level 001002 of the BUFR Template
-    ``pybufrkit query /001002 BUFR_FILE``
+    # Query values from the metadata sections (section 0, 1, 2, 3):
+    pybufrkit query %n_subsets BUFR_FILE
 
-* Query for 001002 that is a direct child of 301001
-    ``pybufrkit query /301001/001002 BUFR_FILE``
+    # Query all values for descriptor 001002 of the data section
+    pybufrkit query 001002 BUFR_FILE
 
-* Query for all 001002 of the first subset
-    ``pybufrkit query '@[0] > 001002' BUFR_FILE``
+    # Query for those root level 001002 of the BUFR Template
+    pybufrkit query /001002 BUFR_FILE
 
-* Query for associated field of 021062
-    ``pybufrkit query 021062.A21062 BUFR_FILE``
+    # Query for 001002 that is a direct child of 301001
+    pybufrkit query /301001/001002 BUFR_FILE
 
-* Filtering through a number of BUFR files with Script support
-  (find files that have multiple subsets):
-    ``pybufrkit script 'if ${%n_subsets} > 1: print(PBK_FILENAME)' DIRECTORY/*.bufr``
+    # Query for all 001002 of the first subset
+    pybufrkit query '@[0] > 001002' BUFR_FILE
 
-* Lookup information for a Element Descriptor (along with its code table)
-    ``pybufrkit lookup -l 020003``
+    # Query for associated field of 021062
+    pybufrkit query 021062.A21062 BUFR_FILE
 
-* Compile a BUFR Template composed as a comma separated list of descriptors
-    ``pybufrkit compile 309052,205060``
+    # Filtering through a number of BUFR files with Script support
+    # (find files that have multiple subsets):
+    pybufrkit script 'if ${%n_subsets} > 1: print(PBK_FILENAME)' DIRECTORY/*.bufr
+
+    # Lookup information for a Element Descriptor (along with its code table)
+    pybufrkit lookup -l 020003
+
+    # Compile a BUFR Template composed as a comma separated list of descriptors
+    pybufrkit compile 309052,205060
+
 
 Library Usage
 -------------

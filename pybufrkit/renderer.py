@@ -14,6 +14,7 @@ from six.moves import range, zip
 
 from pybufrkit.constants import INDENT_CHARS, PARAMETER_TYPE_TEMPLATE_DATA
 from pybufrkit.errors import UnknownDescriptor
+from pybufrkit.utils import fixed_width_repr_of_int
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicationDescriptor,
                                    DelayedReplicationDescriptor, OperatorDescriptor,
@@ -105,12 +106,17 @@ class FlatTextRenderer(Renderer):
                     )
 
                 if idx in bitmap_links:
-                    ret.append('{:4d} {:65.65} -> {:<6d} {!r}'.format(
-                        idx + 1, self._render_descriptor(descriptor), bitmap_links[idx] + 1, value)
+                    ret.append('{} {:64.64} -> {} {!r}'.format(
+                        fixed_width_repr_of_int(idx + 1, 5),
+                        self._render_descriptor(descriptor),
+                        fixed_width_repr_of_int(bitmap_links[idx] + 1, 6, pad_left=False),
+                        value)
                     )
                 else:
-                    ret.append('{:4d} {:75.75} {!r}'.format(
-                        idx + 1, self._render_descriptor(descriptor), value)
+                    ret.append('{} {:74.74} {!r}'.format(
+                        fixed_width_repr_of_int(idx + 1, 5),
+                        self._render_descriptor(descriptor),
+                        value)
                     )
         return '\n'.join(ret)
 

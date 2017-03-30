@@ -22,6 +22,20 @@ class EntityEncoder(json.JSONEncoder):
 JSON_DUMPS_KWARGS = {'encoding': 'latin-1'} if six.PY2 else {'cls': EntityEncoder}
 
 
+def fixed_width_repr_of_int(value, width, pad_left=True):
+    """
+    Format the given integer and ensure the result string is of the given
+    width. The string will be padded space on the left if the number is 
+    small or replaced as a string of asterisks if the number is too big.
+    
+    :param int value: An integer number to format 
+    :param int width: The result string must have the exact width 
+    :return: A string representation of the given integer. 
+    """
+    ret = '{:{pad_dir}{width}d}'.format(value, pad_dir='>' if pad_left else '>', width=width)
+    return '*' * width if len(ret) > width else ret
+
+
 def nested_json_to_flat_json(nested_json_data):
     """
     Converted the nested JSON output to the flat JSON output. This is
@@ -88,6 +102,27 @@ TEXT_SECTION_HEADER = '<<<<<<'
 TEXT_SUBSET_HEADER = '######'
 
 
+def section_text_to_flat_json(lines, idxline, func_subsets_text_to_flat_json):
+    """
+    Convert a section from text output to a section of flat JSON.
+    """
+    section_data = []
+    idxline += 1  # skip the section header
+    while idxline < len(lines):
+        line = lines[idxline]
+        if line.startswith(TEXT_SECTION_HEADER):
+            break
+        if line.startswith(TEXT_SUBSET_HEADER):
+            idxline, data_all_subsets = func_subsets_text_to_flat_json(lines, idxline)
+            section_data.append(data_all_subsets)
+            continue
+        parameter_name, value = line.split(' = ')
+        section_data.append(ast.literal_eval(value))
+        idxline += 1
+
+    return idxline, section_data
+
+
 def flat_text_to_flat_json(flat_text):
     """
     Convert the flat Text output to the flat JSON output format
@@ -99,31 +134,10 @@ def flat_text_to_flat_json(flat_text):
     lines = flat_text.splitlines()[1:]
     idxline = 0
     while idxline < len(lines):
-        idxline, section_data = section_flat_text_to_flat_json(lines, idxline)
+        idxline, section_data = section_text_to_flat_json(lines, idxline, subsets_flat_text_to_flat_json)
         flat_json.append(section_data)
 
     return flat_json
-
-
-def section_flat_text_to_flat_json(lines, idxline):
-    """
-    Convert a section from the flat text output to a section of flat JSON.
-    """
-    section_data = []
-    idxline += 1  # skip the section header
-    while idxline < len(lines):
-        line = lines[idxline]
-        if line.startswith(TEXT_SECTION_HEADER):
-            break
-        if line.startswith(TEXT_SUBSET_HEADER):
-            idxline, data_all_subsets = subsets_flat_text_to_flat_json(lines, idxline)
-            section_data.append(data_all_subsets)
-            continue
-        parameter_name, value = line.split(' = ')
-        section_data.append(ast.literal_eval(value))
-        idxline += 1
-
-    return idxline, section_data
 
 
 def subsets_flat_text_to_flat_json(lines, idxline):
@@ -159,31 +173,10 @@ def nested_text_to_flat_json(nested_text):
     lines = nested_text.splitlines()[1:]
     idxline = 0
     while idxline < len(lines):
-        idxline, section_data = section_nested_text_to_flat_json(lines, idxline)
+        idxline, section_data = section_text_to_flat_json(lines, idxline, subsets_nested_text_to_flat_json)
         flat_json.append(section_data)
 
     return flat_json
-
-
-def section_nested_text_to_flat_json(lines, idxline):
-    """
-    Convert a section from the flat text output to a section of flat JSON.
-    """
-    section_data = []
-    idxline += 1  # skip the section header
-    while idxline < len(lines):
-        line = lines[idxline]
-        if line.startswith(TEXT_SECTION_HEADER):
-            break
-        if line.startswith(TEXT_SUBSET_HEADER):
-            idxline, data_all_subsets = subsets_nested_text_to_flat_json(lines, idxline)
-            section_data.append(data_all_subsets)
-            continue
-        parameter_name, value = line.split(' = ')
-        section_data.append(ast.literal_eval(value))
-        idxline += 1
-
-    return idxline, section_data
 
 
 def subsets_nested_text_to_flat_json(lines, idxline):
