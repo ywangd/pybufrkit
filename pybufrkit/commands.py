@@ -52,8 +52,11 @@ def command_decode(ns):
                 print(FlatTextRenderer().render(m))
 
     for filename in ns.filenames:
-        with open(filename, 'rb') as ins:
-            s = ins.read()
+        if filename != '-':
+            with open(filename, 'rb') as ins:
+                s = ins.read()
+        else:
+            s = sys.stdin.read()
 
         if ns.multiple_messages:
             for bufr_message in generate_bufr_message(decoder, s,
