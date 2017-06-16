@@ -13,7 +13,7 @@ from collections import OrderedDict
 from six.moves import range, zip
 
 from pybufrkit.constants import INDENT_CHARS, PARAMETER_TYPE_TEMPLATE_DATA
-from pybufrkit.errors import UnknownDescriptor
+from pybufrkit.errors import PyBufrKitError, UnknownDescriptor
 from pybufrkit.utils import fixed_width_repr_of_int
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicationDescriptor,
@@ -48,7 +48,7 @@ class Renderer(object):
         elif isinstance(obj, QueryResult):
             return self._render_query_result(obj)
         else:
-            raise RuntimeError('Unknown object {} for rendering'.format(type(obj)))
+            raise PyBufrKitError('Unknown object {} for rendering'.format(type(obj)))
 
     @abc.abstractmethod
     def _render_bufr_message(self, bufr_message):

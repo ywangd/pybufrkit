@@ -16,6 +16,7 @@ import functools
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor,
                                    DelayedReplicationDescriptor,
@@ -406,4 +407,4 @@ class TemplateData(object):
                 self.wire_skippable_local_descriptor()
 
             else:
-                raise RuntimeError('Cannot wire descriptor type: {}'.format(type(member)))
+                raise PyBufrKitError('Cannot wire descriptor type: {}'.format(type(member)))

@@ -18,6 +18,7 @@ from pybufrkit.constants import (BITPOS_START,
                                  NUMERIC_MISSING_VALUES,
                                  PARAMETER_TYPE_TEMPLATE_DATA,
                                  PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.bitops import get_bit_reader
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData
@@ -71,7 +72,7 @@ class Decoder(Coder):
         """
         idx = s.find(start_signature) if start_signature is not None else 0
         if idx == -1:
-            raise RuntimeError('Cannot find start signature: {}'.format(start_signature))
+            raise PyBufrKitError('Cannot find start signature: {}'.format(start_signature))
         s = s[idx:]
 
         bit_reader = get_bit_reader(s)
@@ -147,7 +148,7 @@ class Decoder(Coder):
                 log.debug('Skipping {} bits to end of the section'.format(nbits_unread))
                 bit_reader.read_bin(nbits_unread)
             elif nbits_unread < 0:
-                raise RuntimeError('Read exceeds declared section length: {}'.format(section.section_length.value))
+                raise PyBufrKitError('Read exceeds declared section length: {}'.format(section.section_length.value))
 
         return bit_reader.get_pos() - section.get_metadata(BITPOS_START)
 

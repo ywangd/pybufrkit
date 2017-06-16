@@ -14,6 +14,8 @@ associated values signified by operator descriptor 204YYY.
 from __future__ import absolute_import
 from __future__ import print_function
 
+from pybufrkit.errors import PyBufrKitError
+
 
 class Descriptor(object):
     """
@@ -242,7 +244,7 @@ class DelayedReplicationDescriptor(ReplicationDescriptor):
 
     @property
     def n_repeats(self):
-        raise RuntimeError('Cannot access n_repeats for Delayed Replication')
+        raise PyBufrKitError('Cannot access n_repeats for Delayed Replication')
 
 
 class OperatorDescriptor(Descriptor):

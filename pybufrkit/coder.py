@@ -18,7 +18,7 @@ from pybufrkit.constants import (DEFAULT_TABLES_DIR,
                                  UNITS_CODE_TABLE,
                                  UNITS_FLAG_TABLE,
                                  UNITS_STRING)
-from pybufrkit.errors import UnknownDescriptor
+from pybufrkit.errors import PyBufrKitError, UnknownDescriptor
 from pybufrkit.bufr import SectionConfigurer
 from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor,
@@ -184,7 +184,7 @@ class CoderState(object):
             value = self.decoded_values[idx]
 
         if value is None or value < 0:
-            raise RuntimeError('Delayed replication factor must be >= 0: ({!r})'.format(value))
+            raise PyBufrKitError('Delayed replication factor must be >= 0: ({!r})'.format(value))
 
         return value
 
@@ -204,7 +204,7 @@ class CoderState(object):
                     if len(self.back_referenced_descriptors) == len(bitmap):
                         break
         if len(self.back_referenced_descriptors) != len(bitmap):
-            raise RuntimeError('Back referenced descriptors not matching defined Bitmap')
+            raise PyBufrKitError('Back referenced descriptors not matching defined Bitmap')
 
         # Lastly, get all the descriptors that has a corresponding Zero bit value
         self.bitmapped_descriptors = [
@@ -351,7 +351,7 @@ class Coder(object):
         """
         log.debug('Defining new reference value for '.format(descriptor))
         if descriptor.unit == UNITS_STRING:
-            raise RuntimeError('Cannot define new reference value for descriptor of string value')
+            raise PyBufrKitError('Cannot define new reference value for descriptor of string value')
         self.process_new_refval(bit_operator, descriptor, state.nbits_of_new_refval)
 
     def process_skipped_local_descriptor(self, state, bit_operator, descriptor):

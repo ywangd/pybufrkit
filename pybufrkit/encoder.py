@@ -17,6 +17,7 @@ from pybufrkit.constants import (BITPOS_START,
                                  NUMERIC_MISSING_VALUES,
                                  PARAMETER_TYPE_TEMPLATE_DATA,
                                  PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.bitops import get_bit_writer
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.templatedata import TemplateData
@@ -118,7 +119,7 @@ class Encoder(Coder):
                 section.get_metadata(BITPOS_START) + section.get_parameter_offset('length')
             )
         elif bufr_message.length.value != nbytes_write:
-            raise RuntimeError('Write exceeds declared total length {} by {} bytes'.format(
+            raise PyBufrKitError('Write exceeds declared total length {} by {} bytes'.format(
                 bufr_message.length.value, nbytes_write - bufr_message.length.value
             ))
 
@@ -179,7 +180,7 @@ class Encoder(Coder):
                     log.debug('Padding {} bits to for declared length of the section'.format(nbits_unwrite))
                     bit_writer.skip(nbits_unwrite)
                 elif nbits_unwrite < 0:
-                    raise RuntimeError('Writing exceeds declared section length {} by {} bytes'.format(
+                    raise PyBufrKitError('Writing exceeds declared section length {} by {} bytes'.format(
                         section.section_length.value, -nbits_unwrite // NBITS_PER_BYTE
                     ))
 

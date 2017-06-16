@@ -124,7 +124,7 @@ class BufrSection(object):
             else:
                 nbits_offset += parameter.nbits
         else:
-            raise RuntimeError('Parameter "{}" not found'.format(parameter_name))
+            raise PyBufrKitError('Parameter "{}" not found'.format(parameter_name))
 
 
 # An indicator for using the fallback default edition of a section

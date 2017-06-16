@@ -11,6 +11,7 @@ import json
 import logging
 import contextlib
 
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.coder import Coder, CoderState
 from pybufrkit.tables import TableGroupKey, get_table_group_by_key
 from pybufrkit.descriptors import Descriptor
@@ -252,7 +253,7 @@ class TemplateCompiler(Coder):
         elif state.n_031031 == n_031031:
             pass
         else:
-            raise RuntimeError('erroneous n_031031 change')
+            raise PyBufrKitError('erroneous n_031031 change')
 
     def process_fixed_replication_descriptor(self, state, bit_operator, descriptor):
         with state.new_loop(descriptor.n_repeats):
@@ -347,7 +348,7 @@ def process_statements(coder, state, bit_operator, statements):
                 else:
                     getattr(coder, statement.method_name)(state, *statement.args)
             else:
-                raise RuntimeError('Unknown statement: {}'.format(statement))
+                raise PyBufrKitError('Unknown statement: {}'.format(statement))
 
         elif isinstance(statement, State031031Reset):
             state.n_031031 = 0
@@ -365,7 +366,7 @@ def process_statements(coder, state, bit_operator, statements):
                 process_statements(coder, state, bit_operator, statement.statements)
 
         else:
-            raise RuntimeError('Unknown statement: {}'.format(statement))
+            raise PyBufrKitError('Unknown statement: {}'.format(statement))
 
 
 #############################################################################
