@@ -491,6 +491,7 @@ class Coder(object):
         if descriptor.id in (31011, 31012):
             raise NotImplementedError('delayed repetition descriptor')
 
+        log.debug('Processing {}'.format(descriptor.factor))
         self.process_element_descriptor(state, bit_operator, descriptor.factor)
         for _ in range(self.get_value_for_delayed_replication_factor(state)):
             self.process_members(state, bit_operator, descriptor.members)

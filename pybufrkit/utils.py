@@ -10,6 +10,22 @@ import json
 import six
 
 
+def flatten_list(values):
+    """
+    Flatten a list so everything is in a list without nesting
+    .
+    :param values:
+    :return:
+    """
+    flat_values = []
+    for entry in values:
+        if isinstance(entry, list):
+            flat_values += flatten_list(entry)
+        else:
+            flat_values.append(entry)
+    return flat_values
+
+
 # Encode bytes as string for Python 3
 class EntityEncoder(json.JSONEncoder):
     def default(self, o):

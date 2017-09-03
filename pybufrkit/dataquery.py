@@ -15,6 +15,7 @@ from pybufrkit.templatedata import (
     ValueDataNode,
     FixedReplicationNode, DelayedReplicationNode, SequenceNode
 )
+from pybufrkit.utils import flatten_list
 
 __all__ = ['NodePathParser', 'DataQuerent', 'QueryResult', 'PATH_SEPARATOR_CHILD']
 
@@ -300,7 +301,7 @@ class QueryResult(object):
 
     def get_values(self, i_subset, flat=False):
         values = self.results[i_subset]
-        return self.flatten_values(values) if flat else values
+        return flatten_list(values) if flat else values
 
     def all_values(self, flat=False):
         if flat:
@@ -310,20 +311,6 @@ class QueryResult(object):
 
     def __iter__(self):
         return iter(self.results.viewitems())
-
-    def flatten_values(self, values):
-        """
-        Flatten values as a list with no nesting.
-        :param values:
-        :return:
-        """
-        flat_values = []
-        for entry in values:
-            if isinstance(entry, list):
-                flat_values += self.flatten_values(entry)
-            else:
-                flat_values.append(entry)
-        return flat_values
 
 
 NODE_NOT_MATCH = 0

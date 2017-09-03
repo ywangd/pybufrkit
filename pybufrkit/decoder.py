@@ -148,7 +148,8 @@ class Decoder(Coder):
                 log.debug('Skipping {} bits to end of the section'.format(nbits_unread))
                 bit_reader.read_bin(nbits_unread)
             elif nbits_unread < 0:
-                raise PyBufrKitError('Read exceeds declared section length: {}'.format(section.section_length.value))
+                raise PyBufrKitError('Read exceeds declared section {} length: {} by {} bits'.format(
+                    section.get_metadata('index'), section.section_length.value, -nbits_unread))
 
         return bit_reader.get_pos() - section.get_metadata(BITPOS_START)
 
