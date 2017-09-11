@@ -513,11 +513,12 @@ class Coder(object):
             state.scale_offset = (operand_value - 128) if operand_value else 0
 
         elif operator_code == 203:  # new reference value
-            if operand_value == 0:
-                state.new_refvals = {}  # TODO: this seems not used
-                state.nbits_of_new_refval = operand_value
-            else:  # 255
+            if operand_value == 255:  # 255 is to conclude not cancel
                 state.nbits_of_new_refval = 0
+            else:
+                state.nbits_of_new_refval = operand_value
+                if operand_value == 0:
+                    state.new_refvals = {}
 
         elif operator_code == 204:  # associated field
             if operand_value == 0:
