@@ -22,7 +22,10 @@ list of some of the features:
   `ecCodes <https://software.ecmwf.int/wiki/display/ECC/ecCodes+Home>`_
   and `BUFRDC <https://software.ecmwf.int/wiki/display/BUFR/BUFRDC+Home>`_.
 
-Find more documentation at http://pybufrkit.readthedocs.io/
+More documentation at http://pybufrkit.readthedocs.io/
+
+An `online BUFR decoder <http://aws-bufr-webapp.s3-website-ap-southeast-2.amazonaws.com/>`_ powered by PyBufrKit, 
+`Serverless <https://serverless.com/>`_ and `AWS Lambda <https://aws.amazon.com/lambda/>`_.
 
 Installation
 ------------
