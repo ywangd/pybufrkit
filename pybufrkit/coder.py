@@ -580,7 +580,7 @@ class Coder(object):
             self.process_constant(state, bit_operator, descriptor, 0)
 
         else:  # TODO: 241, 242, 243
-            raise NotImplemented('Operator Descriptor {} not implemented'.format(descriptor))
+            raise NotImplementedError('Operator Descriptor {} not implemented'.format(descriptor))
 
     def process_sequence_descriptor(self, state, bit_operator, descriptor):
         self.process_members(state, bit_operator, descriptor.members)

@@ -37,6 +37,7 @@ from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor, DelayedReplicationDescriptor,
                                    OperatorDescriptor, SequenceDescriptor, BufrTemplate,
                                    UndefinedElementDescriptor, UndefinedSequenceDescriptor)
+from pybufrkit.utils import generate_quiet
 
 __all__ = ['TableGroupKey', 'get_table_group', 'get_table_group_by_key']
 
@@ -101,7 +102,7 @@ def normalize_tables_sn(tables_root_dir,
 
     # Ensure the master table number exists
     if not os.path.isdir(os.path.join(tables_root_dir, master_table_number_string)):
-        log.warn('Fallback to default master table number: {} ({} not found)'.format(
+        log.warning('Fallback to default master table number: {} ({} not found)'.format(
             DEFAULT_MASTER_TABLE_NUMBER, master_table_number_string
         ))
         master_table_number_string = str(DEFAULT_MASTER_TABLE_NUMBER)
@@ -115,7 +116,7 @@ def normalize_tables_sn(tables_root_dir,
                                   )):
         wmo_tables_sn = (master_table_number_string, centres, master_table_version_string)
     else:
-        log.warn('Fallback to default master table version {} ({} not found)'.format(
+        log.warning('Fallback to default master table version {} ({} not found)'.format(
             DEFAULT_MASTER_TABLE_VERSION, master_table_version_string
         ))
         wmo_tables_sn = (master_table_number_string, centres, str(DEFAULT_MASTER_TABLE_VERSION))
@@ -133,12 +134,12 @@ def normalize_tables_sn(tables_root_dir,
                                           local_table_version_string)):
                 local_tables_sn = (master_table_number_string, centres, local_table_version_string)
                 if idx != 0:
-                    log.warn('Fallback to default local sub-centre {} ({} not found)'.format(
+                    log.warning('Fallback to default local sub-centre {} ({} not found)'.format(
                         DEFAULT_ORIGINATING_SUBCENTRE, originating_subcentre
                     ))
                 break
         else:
-            log.warn('Cannot find sub-centre {} nor valid default. Local table not in use.'.format(
+            log.warning('Cannot find sub-centre {} nor valid default. Local table not in use.'.format(
                 originating_subcentre
             ))
             local_tables_sn = None
@@ -291,7 +292,7 @@ def _descriptors_from_ids_iter(b, c, r, d, next_id):
             if isinstance(descriptor, DelayedReplicationDescriptor):
                 descriptor.factor = b.lookup(next_id())
 
-            g = (next_id() for _ in range(descriptor.n_items))
+            g = generate_quiet(range(descriptor.n_items), next_id)
             # TODO: check whether the actual number of members equals to n_items
             descriptor.members = _descriptors_from_ids_iter(b, c, r, d, functools.partial(next, g))
             descriptors.append(descriptor)
