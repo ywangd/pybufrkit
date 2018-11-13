@@ -370,7 +370,7 @@ class TemplateData(object):
             self.add_value_node()
 
         else:  # TODO: 241, 242, 243
-            raise NotImplemented('Operator Descriptor {} not implemented'.format(descriptor))
+            raise NotImplementedError('Operator Descriptor {} not implemented'.format(descriptor))
 
     def wire_skippable_local_descriptor(self):
         self.add_value_node()

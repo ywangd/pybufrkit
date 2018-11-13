@@ -235,3 +235,16 @@ def subsets_nested_text_to_flat_json(lines, idxline):
             data_all_subsets[-1].append(value)
         idxline += 1
     return idxline, data_all_subsets
+
+
+def generate_quiet(iterable, next_val):
+    """
+    Iterate, returning if the generator function raises StopIteration.
+
+    https://www.python.org/dev/peps/pep-0479/
+    """
+    for _ in iterable:
+        try:
+            yield next_val()
+        except StopIteration:
+            return
