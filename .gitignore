@@ -65,3 +65,4 @@ debug
 benchmark*.prof
 *.bak
 .eggs
+.pytest_cache/

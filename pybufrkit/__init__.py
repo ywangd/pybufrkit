@@ -33,7 +33,7 @@ from pybufrkit.errors import (BitReadError,
                               UnknownDescriptor,
                               PyBufrKitError)
 
-__version__ = '0.2.6'
+__version__ = '0.2.7'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')

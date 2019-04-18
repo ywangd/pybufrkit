@@ -125,7 +125,7 @@ table_group_02_cmp = """340008 (IASI sequence combining PC scores, channel selec
 class TablesTests(unittest.TestCase):
 
     def setUp(self):
-        self.table_group = get_table_group()
+        self.table_group = get_table_group(master_table_version=29)
         self.flat_text_renderer = FlatTextRenderer()
 
     def tearDown(self):
