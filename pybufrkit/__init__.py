@@ -104,6 +104,12 @@ def main():
                                help='The input is in JSON format')
     encode_parser.add_argument('-a', '--attributed', action='store_true',
                                help='The input takes nested and attributed format')
+    encode_parser.add_argument('--master-table-number',
+                               type=int,
+                               help='Master table number to use for encoding (overrides value from input source)')
+    encode_parser.add_argument('--master-table-version',
+                               type=int,
+                               help='Master table version to use for encoding (overrides value from input source)')
     encode_parser.add_argument('--compiled-template-cache-max',
                                type=int,
                                help='The maximum number of compiled templates to cache. '

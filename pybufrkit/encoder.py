@@ -57,10 +57,17 @@ class Encoder(Coder):
                  definitions_dir=None,
                  tables_root_dir=None,
                  ignore_declared_length=True,
-                 compiled_template_cache_max=None):
+                 compiled_template_cache_max=None,
+                 master_table_number=None,
+                 master_table_version=None):
 
         super(Encoder, self).__init__(definitions_dir, tables_root_dir)
         self.ignore_declared_length = ignore_declared_length
+        self.overrides = {}
+        if master_table_number:
+            self.overrides['master_table_number'] = master_table_number
+        if master_table_version:
+            self.overrides['master_table_version'] = master_table_version
 
         # Only enable template compilation if cache is requested
         if compiled_template_cache_max is not None:
@@ -98,7 +105,8 @@ class Encoder(Coder):
         index_offset = 0
         while True:
             section = self.section_configurer.configure_section_with_values(
-                bufr_message, section_index, json_data[section_index - index_offset])
+                bufr_message, section_index, json_data[section_index - index_offset],
+                self.overrides)
             section_index += 1
             if section is None:  # optional section is not present
                 index_offset += 1  # This section should not be counted

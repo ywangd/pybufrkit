@@ -112,7 +112,8 @@ def command_encode(ns):
     """
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
-                      compiled_template_cache_max=ns.compiled_template_cache_max)
+                      compiled_template_cache_max=ns.compiled_template_cache_max,
+                      master_table_version=ns.master_table_version)
     if ns.filename != '-':
         with open(ns.filename) as ins:
             s = ins.read()

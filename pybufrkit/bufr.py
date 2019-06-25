@@ -229,7 +229,7 @@ class SectionConfigurer(object):
         # Get the default config for the section if specific edition is not found
         return section_configs.get(section_edition, section_configs[DEFAULT_SECTION_EDITION])
 
-    def configure_section_with_values(self, bufr_message, section_index, values):
+    def configure_section_with_values(self, bufr_message, section_index, values, overrides=None):
         """
         Initialise and Configure a section for the give section index and version
         and also populate the value of each section parameter with the given list
@@ -246,7 +246,7 @@ class SectionConfigurer(object):
                 'Number of Section parameters ({}) not equal to number of values to be encoded ({})'.format(
                     len(section), len(values))
             for idx, parameter in enumerate(section):
-                parameter.value = values[idx]
+                parameter.value = values[idx] if overrides is None else overrides.get(parameter.name, values[idx])
 
         return section
 
