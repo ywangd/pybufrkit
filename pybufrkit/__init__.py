@@ -68,6 +68,8 @@ def main():
         metavar='command',
         help='Use "{} command -h" for more help on a command'.format(__name__)
     )
+    if hasattr(subparsers, 'required'):
+        subparsers.required = True
 
     decode_parser = subparsers.add_parser('decode',
                                           help='decode BUFR file')
