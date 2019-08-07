@@ -159,7 +159,7 @@ class TemplateData(object):
         else:
             self.decoded_nodes_all_subsets = [[] for _ in range(self.n_subsets)]
 
-        self.decoded_nodes = self.decoded_nodes_all_subsets[0]
+        self.decoded_nodes = [] if not self.decoded_nodes_all_subsets else self.decoded_nodes_all_subsets[0]
 
         self._is_wired = False
 
