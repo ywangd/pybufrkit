@@ -91,8 +91,8 @@ class CoderState(object):
 
         # For uncompressed data, the following two values will be changed during
         # subset context switching
-        self.decoded_descriptors = self.decoded_descriptors_all_subsets[0]
-        self.bitmap_links = self.bitmap_links_all_subsets[0]
+        self.decoded_descriptors = [] if n_subsets == 0 else self.decoded_descriptors_all_subsets[0]
+        self.bitmap_links = [] if n_subsets == 0 else self.bitmap_links_all_subsets[0]
 
         # When debug is turned on, use AuditedList for more logging messages.
         # Each element in the values all_subsets is different compressed or not
@@ -101,7 +101,7 @@ class CoderState(object):
         else:
             self.decoded_values_all_subsets = decoded_values_all_subsets or [[] for _ in range(n_subsets)]
 
-        self.decoded_values = self.decoded_values_all_subsets[0]
+        self.decoded_values = [] if n_subsets == 0 else self.decoded_values_all_subsets[0]
 
         self.idx_value = 0  # only needed for encoder
 
