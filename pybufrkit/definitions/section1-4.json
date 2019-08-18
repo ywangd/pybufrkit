@@ -46,7 +46,8 @@
     {
       "name": "data_category",
       "nbits": 8,
-      "type": "uint"
+      "type": "uint",
+      "as_property": true
     },
     {
       "name": "data_i18n_subcategory",

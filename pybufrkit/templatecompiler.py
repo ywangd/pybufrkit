@@ -13,7 +13,7 @@ import contextlib
 
 from pybufrkit.errors import PyBufrKitError
 from pybufrkit.coder import Coder, CoderState
-from pybufrkit.tables import TableGroupKey, get_table_group_by_key
+from pybufrkit.tables import TableGroupKey, TableGroupCacheManager
 from pybufrkit.descriptors import Descriptor
 
 __all__ = ['loads_compiled_template', 'TemplateCompiler', 'CompiledTemplateManager', 'process_compiled_template']
@@ -424,7 +424,7 @@ def loads_compiled_template(s):
     assert d['type'] == 'CompiledTemplate', 'The type must be CompiledTemplate (was {})'.format(d['type'])
     # Table group key and its elements must be tuple to be hashable, which is a
     # requirement for being a key to dict.
-    table_group = get_table_group_by_key(
+    table_group = TableGroupCacheManager.get_table_group_by_key(
         TableGroupKey(*[(tuple(x) if isinstance(x, list) else x) for x in d['table_group_key']])
     )
     template = table_group.template_from_ids(*d['template_ids'])

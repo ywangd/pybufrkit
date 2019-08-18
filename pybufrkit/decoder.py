@@ -21,8 +21,10 @@ from pybufrkit.constants import (BITPOS_START,
 from pybufrkit.errors import PyBufrKitError
 from pybufrkit.bitops import get_bit_reader
 from pybufrkit.bufr import BufrMessage
+from pybufrkit.tables import TableGroupCacheManager
 from pybufrkit.templatedata import TemplateData
 from pybufrkit.coder import Coder, CoderState
+from pybufrkit.dataprocessor import BufrTableDefinitionProcessor
 from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
 
 __all__ = ['Decoder']
@@ -384,6 +386,9 @@ class Decoder(Coder):
             decoded_values.append(value)
 
 
+DATA_CATEGORY_DEFINE_BUFR_TABLES = 11
+
+
 def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
     """
     This is a generator function that processes the given string for one
@@ -404,5 +409,12 @@ def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
         # If data section is not decoded, we rely on the declared length for the message length
         if info_only:
             bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
+        else:
+            if (bufr_message.data_category.value == DATA_CATEGORY_DEFINE_BUFR_TABLES
+                    and bufr_message.n_subsets.value > 0):
+                _, b_entries, d_entries = BufrTableDefinitionProcessor().process(bufr_message)
+                TableGroupCacheManager.invalidate()
+                TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
         idx_start += len(bufr_message.serialized_bytes)
+
         yield bufr_message

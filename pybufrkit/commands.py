@@ -18,7 +18,7 @@ from pybufrkit.constants import (UNITS_CODE_TABLE,
 from pybufrkit.errors import PyBufrKitError
 from pybufrkit.utils import nested_json_to_flat_json, flat_text_to_flat_json, nested_text_to_flat_json
 from pybufrkit.descriptors import ElementDescriptor
-from pybufrkit.tables import get_table_group
+from pybufrkit.tables import TableGroupCacheManager
 from pybufrkit.decoder import Decoder, generate_bufr_message
 from pybufrkit.encoder import Encoder
 from pybufrkit.utils import JSON_DUMPS_KWARGS
@@ -172,12 +172,12 @@ def command_lookup(ns):
     """
     Command to lookup the given descriptors from command line
     """
-    table_group = get_table_group(ns.tables_root_directory,
-                                  ns.master_table_number,
-                                  ns.originating_centre,
-                                  ns.originating_subcentre,
-                                  ns.master_table_version,
-                                  ns.local_table_version)
+    table_group = TableGroupCacheManager.get_table_group(ns.tables_root_directory,
+                                                         ns.master_table_number,
+                                                         ns.originating_centre,
+                                                         ns.originating_subcentre,
+                                                         ns.master_table_version,
+                                                         ns.local_table_version)
     flat_text_render = FlatTextRenderer()
     table_group.B.load_code_and_flag()  # load the code and flag tables for additional details
     descriptors = table_group.descriptors_from_ids(
@@ -222,12 +222,12 @@ def command_compile(ns):
             bufr_message = decoder.process(ins.read(), file_path=ns.input, info_only=True)
             template, table_group = bufr_message.build_template(ns.tables_root_directory, normalize=1)
     else:
-        table_group = get_table_group(ns.tables_root_directory,
-                                      ns.master_table_number,
-                                      ns.originating_centre,
-                                      ns.originating_subcentre,
-                                      ns.master_table_version,
-                                      ns.local_table_version)
+        table_group = TableGroupCacheManager.get_table_group(ns.tables_root_directory,
+                                                             ns.master_table_number,
+                                                             ns.originating_centre,
+                                                             ns.originating_subcentre,
+                                                             ns.master_table_version,
+                                                             ns.local_table_version)
         descriptor_ids = [x.strip() for x in ns.input.split(',')]
         template = table_group.template_from_ids(*descriptor_ids)
 

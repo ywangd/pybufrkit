@@ -28,7 +28,8 @@
     {
       "name": "data_category",
       "nbits": 8,
-      "type": "uint"
+      "type": "uint",
+      "as_property": true
     },
     {
       "name": "data_local_subcategory",

@@ -39,7 +39,7 @@ from pybufrkit.descriptors import (ElementDescriptor,
                                    UndefinedElementDescriptor, UndefinedSequenceDescriptor)
 from pybufrkit.utils import generate_quiet
 
-__all__ = ['TableGroupKey', 'get_table_group', 'get_table_group_by_key']
+__all__ = ['TableGroupKey', 'TableGroupCacheManager']
 
 log = logging.getLogger(__file__)
 
@@ -151,22 +151,19 @@ def normalize_tables_sn(tables_root_dir,
 
 
 class BaseTable(object):
-    def __init__(self, tables_root_dir, wmo_tables_sn, local_tables_sn):
-        self.tables_root_dir, self.wmo_tables_sn, self.local_tables_sn = (
-            tables_root_dir, wmo_tables_sn, local_tables_sn
-        )
+    def __init__(self, table_group_key, extra_entries=()):
+        self.table_group_key = table_group_key
+        self.extra_entries = extra_entries
 
     def __eq__(self, other):
-        return (
-            type(self) is type(other) and
-            self.tables_root_dir == other.tables_root_dir and
-            self.wmo_tables_sn == other.wmo_tables_sn and
-            self.local_tables_sn == other.local_tables_sn
-        )
+        return type(self) is type(other) and self.table_group_key == other.table_group_key
 
     def __str__(self):
         return '{}: {} - {}, {}'.format(
-            self.__class__.__name__, self.tables_root_dir, self.wmo_tables_sn, self.local_tables_sn
+            self.__class__.__name__,
+            self.table_group_key.tables_root_dir,
+            self.table_group_key.wmo_tables_sn,
+            self.table_group_key.local_tables_sn
         )
 
     @property
@@ -175,13 +172,13 @@ class BaseTable(object):
 
     @property
     def tables_dir_wmo(self):
-        return os.path.join(os.path.join(self.tables_root_dir, *self.wmo_tables_sn))
+        return os.path.join(os.path.join(self.table_group_key.tables_root_dir, *self.table_group_key.wmo_tables_sn))
 
     @property
     def tables_dir_local(self):
         return (
-            os.path.join(os.path.join(self.tables_root_dir, *self.local_tables_sn))
-            if self.local_tables_sn else None
+            os.path.join(os.path.join(self.table_group_key.tables_root_dir, *self.table_group_key.local_tables_sn))
+            if self.table_group_key.local_tables_sn else None
         )
 
     def load_json_files(self, fname):
@@ -191,6 +188,9 @@ class BaseTable(object):
                 continue
             with open(os.path.join(tables_dir, fname)) as ins:
                 contents.append(json.load(ins))
+
+        if self.extra_entries:
+            contents.append(self.extra_entries)
 
         return contents
 
@@ -355,12 +355,12 @@ class BufrTableGroup(_BufrTableGroup):
 
     def __eq__(self, other):
         return (
-            isinstance(other, BufrTableGroup) and
-            self.A == other.A and
-            self.B == other.B and
-            self.C == other.C and
-            self.D == other.D and
-            self.R == other.R
+                isinstance(other, BufrTableGroup) and
+                self.A == other.A and
+                self.B == other.B and
+                self.C == other.C and
+                self.D == other.D and
+                self.R == other.R
         )
 
     def __str__(self):
@@ -376,7 +376,7 @@ class BufrTableGroup(_BufrTableGroup):
 
     @property
     def key(self):
-        return TableGroupKey(self.A.tables_root_dir, self.A.wmo_tables_sn, self.A.local_tables_sn)
+        return self.A.table_group_key
 
     def lookup(self, id_):
         """
@@ -428,6 +428,8 @@ class TableGroupCache(object):
     def __init__(self):
         # TODO: set maximum number of table groups to be cached
         self._groups = {}
+        self.extra_b_entries = {}
+        self.extra_d_entries = {}
 
     def get(self, table_group_key):
         if table_group_key not in self._groups:
@@ -436,74 +438,91 @@ class TableGroupCache(object):
                 for _ in range(len(self._groups) + 1 - MAXIMUM_NUMBER_OF_CACHED_TABLE_GROUPS):
                     self._groups.popitem()
 
-            a = TableA(*table_group_key)
-            b = TableB(*table_group_key)
-            c = TableC(*table_group_key)
-            r = TableR(*table_group_key)
-            d = TableD(b, c, r, *table_group_key)
+            a = TableA(table_group_key)
+            b = TableB(table_group_key, self.extra_b_entries)
+            c = TableC(table_group_key)
+            r = TableR(table_group_key)
+            d = TableD(b, c, r, table_group_key, self.extra_d_entries)
             self._groups[table_group_key] = BufrTableGroup(a, b, c, d, r)
 
         return self._groups[table_group_key]
 
+    def invalidate(self):
+        self._groups.clear()
 
-_TABLE_GROUP_CACHE = TableGroupCache()
-
-
-def get_table_group(tables_root_dir=None,
-                    master_table_number=None,
-                    originating_centre=None,
-                    originating_subcentre=None,
-                    master_table_version=None,
-                    local_table_version=None,
-                    normalize=True):
-    """
-    Retrieve a Table Group using given information that can be converted
-    to a Table Group Key.
-
-    :param master_table_number:
-    :param originating_centre:
-    :param originating_subcentre:
-    :param master_table_version:
-    :param local_table_version:
-    :param str tables_root_dir: Root directory to read the BUFR tables
-    :param int|bool normalize: Whether the program tries to fix non-exist tables SN by
-                      using default values. This is generally useful for
-                      decoding. But could be misleading when encoding.
-    :rtype: BufrTableGroup
-    """
-
-    tables_root_dir = tables_root_dir or DEFAULT_TABLES_DIR
-
-    if normalize:
-        wmo_tables_sn, local_tables_sn = normalize_tables_sn(
-            tables_root_dir,
-            master_table_number or DEFAULT_MASTER_TABLE_NUMBER,
-            originating_centre or DEFAULT_ORIGINATING_CENTRE,
-            originating_subcentre or DEFAULT_ORIGINATING_SUBCENTRE,
-            master_table_version or DEFAULT_MASTER_TABLE_VERSION,
-            local_table_version or DEFAULT_LOCAL_TABLE_VERSION
-        )
-    else:
-        wmo_tables_sn, local_tables_sn = get_tables_sn(
-            master_table_number,
-            originating_centre,
-            originating_subcentre,
-            master_table_version,
-            local_table_version
-        )
-
-    table_group_key = TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn)
-
-    # TODO: catch error on file reading?
-    return get_table_group_by_key(table_group_key)
+    def add_extra_entries(self, b_entries, d_entries):
+        self.extra_b_entries.update(b_entries)
+        self.extra_d_entries.update(d_entries)
 
 
-def get_table_group_by_key(table_group_key):
-    """
-    Retrieve a Table Group with the given key.
+class TableGroupCacheManager(object):
+    _TABLE_GROUP_CACHE = TableGroupCache()
 
-    :param TableGroupKey table_group_key: The key for a table group.
-    :rtype: BufrTableGroup
-    """
-    log.debug('Reading table group of key: {}'.format(table_group_key))
-    return _TABLE_GROUP_CACHE.get(table_group_key)
+    @classmethod
+    def invalidate(cls):
+        cls._TABLE_GROUP_CACHE.invalidate()
+
+    @classmethod
+    def add_extra_entries(cls, b_entries, d_entries):
+        cls._TABLE_GROUP_CACHE.add_extra_entries(b_entries, d_entries)
+
+    @classmethod
+    def get_table_group_by_key(cls, table_group_key):
+        """
+        Retrieve a Table Group with the given key.
+
+        :param TableGroupKey table_group_key: The key for a table group.
+        :rtype: BufrTableGroup
+        """
+        log.debug('Reading table group of key: {}'.format(table_group_key))
+        return cls._TABLE_GROUP_CACHE.get(table_group_key)
+
+    @classmethod
+    def get_table_group(cls,
+                        tables_root_dir=None,
+                        master_table_number=None,
+                        originating_centre=None,
+                        originating_subcentre=None,
+                        master_table_version=None,
+                        local_table_version=None,
+                        normalize=True):
+        """
+        Retrieve a Table Group using given information that can be converted
+        to a Table Group Key.
+
+        :param master_table_number:
+        :param originating_centre:
+        :param originating_subcentre:
+        :param master_table_version:
+        :param local_table_version:
+        :param str tables_root_dir: Root directory to read the BUFR tables
+        :param int|bool normalize: Whether the program tries to fix non-exist tables SN by
+                          using default values. This is generally useful for
+                          decoding. But could be misleading when encoding.
+        :rtype: BufrTableGroup
+        """
+
+        tables_root_dir = tables_root_dir or DEFAULT_TABLES_DIR
+
+        if normalize:
+            wmo_tables_sn, local_tables_sn = normalize_tables_sn(
+                tables_root_dir,
+                master_table_number or DEFAULT_MASTER_TABLE_NUMBER,
+                originating_centre or DEFAULT_ORIGINATING_CENTRE,
+                originating_subcentre or DEFAULT_ORIGINATING_SUBCENTRE,
+                master_table_version or DEFAULT_MASTER_TABLE_VERSION,
+                local_table_version or DEFAULT_LOCAL_TABLE_VERSION
+            )
+        else:
+            wmo_tables_sn, local_tables_sn = get_tables_sn(
+                master_table_number,
+                originating_centre,
+                originating_subcentre,
+                master_table_version,
+                local_table_version
+            )
+
+        table_group_key = TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn)
+
+        # TODO: catch error on file reading?
+        return TableGroupCacheManager.get_table_group_by_key(table_group_key)

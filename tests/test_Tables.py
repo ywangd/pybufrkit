@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import unittest
 
 from pybufrkit.renderer import FlatTextRenderer
-from pybufrkit.tables import get_table_group
+from pybufrkit.tables import TableGroupCacheManager
 from pybufrkit.descriptors import flat_member_ids
 
 
@@ -125,7 +125,7 @@ table_group_02_cmp = """340008 (IASI sequence combining PC scores, channel selec
 class TablesTests(unittest.TestCase):
 
     def setUp(self):
-        self.table_group = get_table_group(master_table_version=29)
+        self.table_group = TableGroupCacheManager.get_table_group(master_table_version=29)
         self.flat_text_renderer = FlatTextRenderer()
 
     def tearDown(self):

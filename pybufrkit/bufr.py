@@ -17,7 +17,7 @@ from datetime import datetime
 
 from pybufrkit.errors import PyBufrKitError
 from pybufrkit.constants import BASE_DIR, NBITS_PER_BYTE, PARAMETER_TYPE_TEMPLATE_DATA
-from pybufrkit.tables import get_table_group
+from pybufrkit.tables import TableGroupCacheManager
 
 log = logging.getLogger(__file__)
 
@@ -338,7 +338,7 @@ class BufrMessage(object):
             one is not available.
         :return: A tuple of BufrTemplate and the associated TableGroup
         """
-        table_group = get_table_group(
+        table_group = TableGroupCacheManager.get_table_group(
             tables_root_dir=tables_root_dir,
             master_table_number=self.master_table_number.value,
             originating_centre=self.originating_centre.value,
@@ -503,6 +503,14 @@ class BufrMessage(object):
     @is_section2_presents.setter
     def is_section2_presents(self, new_value):
         self._is_section2_presents = new_value
+
+    @property
+    def data_category(self):
+        return self._data_category
+
+    @data_category.setter
+    def data_category(self, new_value):
+        self._data_category = new_value
 
     @property
     def n_subsets(self):

@@ -4,7 +4,7 @@ import os
 import json
 import unittest
 
-from pybufrkit.tables import get_table_group
+from pybufrkit.tables import TableGroupCacheManager
 from pybufrkit.templatecompiler import TemplateCompiler, loads_compiled_template
 from pybufrkit.decoder import Decoder
 
@@ -17,7 +17,7 @@ class TemplateCompilerTests(unittest.TestCase):
         self.template_compiler = TemplateCompiler()
 
     def test_compile_serialize_and_deserialize(self):
-        table_group = get_table_group()
+        table_group = TableGroupCacheManager.get_table_group()
         descriptor_ids = [
             x.strip() for x in
             '311001, 222000, 101018, 31031, 1031, 1032, 101018, 33007'.split(',')
