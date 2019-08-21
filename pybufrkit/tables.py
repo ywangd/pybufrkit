@@ -21,6 +21,7 @@ available in the cache yet (and save them to the cache for future use).
 Template are then processed by Coder in conjunction with a bit operator to
 create a BufrMessage object.
 """
+from __future__ import print_function
 from __future__ import absolute_import
 import os
 import json
@@ -414,7 +415,41 @@ class BufrTableGroup(_BufrTableGroup):
         """
         Build BUFR Template from a list of IDs
         """
-        return BufrTemplate(members=self.descriptors_from_ids(*ids))
+        members = self.descriptors_from_ids(*ids)
+        if TableGroupCacheManager.has_extra_entries():
+            members = _fix_ncep_descriptors(members)
+        bufr_template = BufrTemplate(members=members)
+        return bufr_template
+
+
+def _fix_ncep_descriptors(descriptors):
+    """
+    Fix ill-defined sequence descriptor, e.g. NCEP 360001, which is consisted of
+    101000, 031002. Note that the actual descriptor to replicated is not part of
+    the sequence descriptor! This is pure evil!!
+    """
+    from copy import deepcopy
+    ret = []
+    while len(descriptors) > 0:
+        descriptor = deepcopy(descriptors.pop(0))
+        if isinstance(descriptor, SequenceDescriptor):
+            if (len(descriptor.members) == 1 and
+                    isinstance(descriptor.members[0], (FixedReplicationDescriptor, DelayedReplicationDescriptor)) and
+                    len(descriptor.members[0].members) == 0):
+                descriptors.insert(0, descriptor.members[0])
+            else:
+                descriptor.members = _fix_ncep_descriptors(descriptor.members)
+                ret.append(descriptor)
+        elif isinstance(descriptor, (FixedReplicationDescriptor, DelayedReplicationDescriptor)):
+            if len(descriptor.members) == 0:
+                assert descriptor.n_items == 1, 'Fix for replication descriptor expects 1 member, got {}'.format(
+                    len(descriptor.members))
+                descriptor.members = [descriptors.pop(0)]
+            descriptor.members = _fix_ncep_descriptors(descriptor.members)
+            ret.append(descriptor)
+        else:
+            ret.append(descriptor)
+    return ret
 
 
 class TableGroupCache(object):
@@ -447,6 +482,9 @@ class TableGroupCache(object):
 
         return self._groups[table_group_key]
 
+    def has_extra_entries(self):
+        return self.extra_b_entries or self.extra_d_entries
+
     def invalidate(self):
         self._groups.clear()
 
@@ -457,6 +495,10 @@ class TableGroupCache(object):
 
 class TableGroupCacheManager(object):
     _TABLE_GROUP_CACHE = TableGroupCache()
+
+    @classmethod
+    def has_extra_entries(cls):
+        return cls._TABLE_GROUP_CACHE.has_extra_entries()
 
     @classmethod
     def invalidate(cls):

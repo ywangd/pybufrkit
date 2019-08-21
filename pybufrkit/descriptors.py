@@ -14,6 +14,9 @@ associated values signified by operator descriptor 204YYY.
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
+
+from pybufrkit.constants import INDENT_CHARS
 from pybufrkit.errors import PyBufrKitError
 
 
@@ -24,6 +27,7 @@ class Descriptor(object):
 
     :param int id_: The descriptor ID.
     """
+
     def __init__(self, id_):
         self.id = id_
 
@@ -56,6 +60,9 @@ class Descriptor(object):
         THe Y value of the descriptor.
         """
         return self.id % 1000
+
+    def accept(self, visitor):
+        visitor.visit_descriptor(self)
 
 
 class AssociatedDescriptor(Descriptor):
@@ -109,6 +116,7 @@ class ElementDescriptor(Descriptor):
     :param int crex_scale: Scale factor of the descriptor value for CREX Spec
     :param int crex_nchars: Number of characters used by the descriptor for CREX Spec
     """
+
     def __init__(self, id_, name, unit, scale, refval, nbits,
                  crex_unit, crex_scale, crex_nchars):
         super(ElementDescriptor, self).__init__(id_)
@@ -122,6 +130,9 @@ class ElementDescriptor(Descriptor):
 
     def as_dict(self):
         return {self.id: (self.name, self.unit, self.scale, self.refval, self.nbits)}
+
+    def accept(self, visitor):
+        visitor.visit_element_descriptor(self)
 
 
 marker_descriptor_prefix = {
@@ -222,6 +233,7 @@ class FixedReplicationDescriptor(ReplicationDescriptor):
     """
     Fixed replication Descriptor 1XXYYY
     """
+
     def __init__(self, id_, members=None):
         super(FixedReplicationDescriptor, self).__init__(id_, members)
 
@@ -233,11 +245,21 @@ class FixedReplicationDescriptor(ReplicationDescriptor):
         """
         return self.id % 1000
 
+    def accept(self, visitor):
+        visitor.visit_replication_descriptor(self)
+        if not self.members:
+            visitor.visit_replication_descriptor_end(self)
+            return
+        for member in self.members:
+            member.accept(visitor)
+        visitor.visit_replication_descriptor_end(self)
+
 
 class DelayedReplicationDescriptor(ReplicationDescriptor):
     """
     Delayed replication Descriptor 1XX000
     """
+
     def __init__(self, id_, members=None, factor=None):
         super(DelayedReplicationDescriptor, self).__init__(id_, members)
         self.factor = factor
@@ -246,11 +268,22 @@ class DelayedReplicationDescriptor(ReplicationDescriptor):
     def n_repeats(self):
         raise PyBufrKitError('Cannot access n_repeats for Delayed Replication')
 
+    def accept(self, visitor):
+        visitor.visit_replication_descriptor(self)
+        visitor.visit_replication_factor(self.factor)
+        if not self.members:
+            visitor.visit_replication_descriptor_end(self)
+            return
+        for member in self.members:
+            member.accept(visitor)
+        visitor.visit_replication_descriptor_end(self)
+
 
 class OperatorDescriptor(Descriptor):
     """
     Operator Descriptor 2XXYYY
     """
+
     def __init__(self, id_):
         super(OperatorDescriptor, self).__init__(id_)
 
@@ -268,6 +301,7 @@ class SequenceDescriptor(Descriptor):
     """
     Sequence Descriptor 3XXYYY
     """
+
     def __init__(self, id_, name, members=None):
         super(SequenceDescriptor, self).__init__(id_)
         self.members = members
@@ -279,12 +313,21 @@ class SequenceDescriptor(Descriptor):
     def __getitem__(self, item):
         return self.members.__getitem__(item)
 
+    def accept(self, visitor):
+        visitor.visit_sequence_descriptor(self)
+        if not self.members:
+            return
+        for member in self.members:
+            member.accept(visitor)
+        visitor.visit_sequence_descriptor_end(self)
+
 
 class BufrTemplate(SequenceDescriptor):
     """
     This class represents a BUFR Template. A Template is composed of one or more
     BUFR Descriptors. It is used in a BUFR message to describe the data section.
     """
+
     def __init__(self, id_=999999, name='', members=None):
         super(BufrTemplate, self).__init__(id_, name, members)
 
@@ -339,6 +382,57 @@ class UndefinedElementDescriptor(UndefinedDescriptor):
 
 class UndefinedSequenceDescriptor(Descriptor):
     pass
+
+
+class DescriptorVisitor(object):
+
+    def visit_descriptor(self, descriptor):
+        pass
+
+    def visit_element_descriptor(self, descriptor):
+        pass
+
+    def visit_replication_descriptor(self, descriptor):
+        pass
+
+    def visit_sequence_descriptor(self, descriptor):
+        pass
+
+    def visit_replication_factor(self, descriptor):
+        pass
+
+
+class PrintBufrTemplateVisitor(DescriptorVisitor):
+
+    def __init__(self, outs=sys.stdout):
+        self.outs = outs
+        self.indent = -1
+
+    def visit_descriptor(self, descriptor):
+        self.print_descriptor(descriptor)
+
+    def visit_element_descriptor(self, descriptor):
+        self.print_descriptor(descriptor)
+
+    def visit_replication_descriptor(self, descriptor):
+        self.print_descriptor(descriptor)
+        self.indent += 1
+
+    def visit_replication_descriptor_end(self, descriptor):
+        self.indent -= 1
+
+    def visit_sequence_descriptor(self, descriptor):
+        self.print_descriptor(descriptor)
+        self.indent += 1
+
+    def visit_sequence_descriptor_end(self, descriptor):
+        self.indent -= 1
+
+    def visit_replication_factor(self, descriptor):
+        print('{}....{}'.format((self.indent - 1) * INDENT_CHARS, descriptor), file=self.outs)
+
+    def print_descriptor(self, descriptor):
+        print('{}{}'.format(self.indent * INDENT_CHARS, descriptor), file=self.outs)
 
 
 def flat_member_ids(descriptor):

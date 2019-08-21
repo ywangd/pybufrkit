@@ -290,7 +290,7 @@ class Coder(object):
         for member in members:
             member_type = type(member)
 
-            log.debug('Processing {}'.format(member))
+            log.debug('Processing {}{}'.format(member, member.name if hasattr(member, 'name') else ''))
 
             # TODO: NOT using if-elif for following checks because they may co-exist???
             #      It is highly unlikely if not impossible

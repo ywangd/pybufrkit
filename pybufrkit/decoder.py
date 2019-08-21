@@ -27,7 +27,7 @@ from pybufrkit.coder import Coder, CoderState
 from pybufrkit.dataprocessor import BufrTableDefinitionProcessor
 from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
 
-__all__ = ['Decoder']
+__all__ = ['Decoder', 'generate_bufr_message']
 
 log = logging.getLogger(__file__)
 
