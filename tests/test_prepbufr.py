@@ -27,5 +27,5 @@ class BenchMarkTests(unittest.TestCase):
             for bufr_message in generate_bufr_message(self.decoder, ins.read()):
                 output.append(FlatTextRenderer().render(bufr_message))
 
-        assert 'a2708bc6464c9c541d2555fef64d9fb6' == hashlib.md5(
-            '\n'.join(output)).hexdigest(), 'prepbufr decoding error'
+        lines = [line for line in ('\n'.join(output) + '\n').splitlines(True) if not line.startswith('TableGroupKey')]
+        assert '721809d8e376946890636c24dfb479ac' == hashlib.md5(''.join(lines)).hexdigest(), 'prepbufr decoding error'
