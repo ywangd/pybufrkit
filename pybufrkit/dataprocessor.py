@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import six
 import itertools
 from pybufrkit.descriptors import flat_member_ids
 from pybufrkit.templatedata import FixedReplicationNode, DelayedReplicationNode
@@ -29,7 +30,13 @@ class BufrTableDefinitionProcessor(object):
         assert flat_member_ids(decoded_node.descriptor) == [1, 2, 3]
         vc = itertools.count(n_repeats * 3 + 1 if is_delayed_replication else 0)
 
-        return lambda: decoded_values[vc.next()]
+        def get_decoded_values():
+            value = decoded_values[next(vc)]
+            if isinstance(value, six.binary_type):
+                value = value.decode()
+            return value
+
+        return get_decoded_values
 
     def _process_table_b_entries(self, next_value, decoded_node, decoded_values):
         n_repeats, is_delayed_replication = self._get_n_repeats(decoded_node, decoded_values)
