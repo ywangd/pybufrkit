@@ -27,7 +27,7 @@ class SectionParameter(object):
     This class represents a Parameter of a Bufr Section.
     """
 
-    def __init__(self, name, nbits, data_type, expected, as_property):
+    def __init__(self, name, nbits, data_type, expected, as_property, value=None):
         # type: (str, int, str, object, bool) -> None
         self.name = name
         self.nbits = nbits
@@ -39,7 +39,7 @@ class SectionParameter(object):
         self.expected = expected
         self.as_property = as_property
         self.parent = None  # the section that parameter belongs to
-        self.value = None
+        self.value = value
 
 
 class SectionNamespace(OrderedDict):
@@ -316,9 +316,11 @@ class BufrMessage(object):
         self.table_group_key = None
         self._edition = None
         # Default to zero for edition 1 which does not have this parameter
-        self._master_table_number = 0
+        self._master_table_number = SectionParameter('master_table_number',
+                                                     0, 'unit', None, True, 0)
         # Default to zero for edition 1 and 2 which do not have this parameter
-        self._originating_subcentre = 0
+        self._originating_subcentre = SectionParameter('originating_subcentre',
+                                                       0, 'unit', None, True, 0)
 
     def add_section(self, section):
         """
