@@ -438,7 +438,7 @@ class Encoder(Coder):
             for value in values:
                 bit_writer.write_uint(value - min_value, nbits_diff)
 
-    def process_numeric_with_new_refval(self, state, bit_writer,
+    def process_numeric_of_new_refval(self, state, bit_writer,
                                         descriptor, nbits, scale_powered,
                                         refval_factor):
         """

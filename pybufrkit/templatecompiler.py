@@ -299,6 +299,7 @@ class TemplateCompiler(Coder):
         state.add_statement(CoderMethodCall(get_func_name(), (descriptor, nbits)))
 
     def process_new_refval(self, state, bit_operator, descriptor, nbits):
+        state.new_refvals[descriptor.id] = None  # Actual value will be decided at runtime
         state.add_statement(CoderMethodCall(get_func_name(), (descriptor, nbits)))
 
     def process_numeric_of_new_refval(self, state, bit_operator,

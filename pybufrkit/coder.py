@@ -58,6 +58,11 @@ class AuditedList(list):
         log.debug('{!r}'.format(p_object))
         super(AuditedList, self).append(p_object)
 
+    def __getitem__(self, item):
+        value = super(AuditedList, self).__getitem__(item)
+        log.debug('{!r}'.format(value))
+        return value
+
 
 class CoderState(object):
     """
@@ -97,7 +102,10 @@ class CoderState(object):
         # When debug is turned on, use AuditedList for more logging messages.
         # Each element in the values all_subsets is different compressed or not
         if logging.root.level == logging.getLevelName('DEBUG'):
-            self.decoded_values_all_subsets = decoded_values_all_subsets or [AuditedList() for _ in range(n_subsets)]
+            if decoded_values_all_subsets:
+                self.decoded_values_all_subsets = [AuditedList(vals) for vals in decoded_values_all_subsets]
+            else:
+                self.decoded_values_all_subsets = [AuditedList() for _ in range(n_subsets)]
         else:
             self.decoded_values_all_subsets = decoded_values_all_subsets or [[] for _ in range(n_subsets)]
 
@@ -290,7 +298,7 @@ class Coder(object):
         for member in members:
             member_type = type(member)
 
-            log.debug('Processing {}{}'.format(member, member.name if hasattr(member, 'name') else ''))
+            log.debug('Processing {} {}'.format(member, member.name if hasattr(member, 'name') else ''))
 
             # TODO: NOT using if-elif for following checks because they may co-exist???
             #      It is highly unlikely if not impossible
@@ -308,7 +316,8 @@ class Coder(object):
                         #       So it helps to keep the structure intact??
 
             # Currently defining new reference values
-            if state.nbits_of_new_refval:
+            # For ElementDescriptor only. This makes sense though not explicitly stated in the manual
+            if state.nbits_of_new_refval and member_type is ElementDescriptor:
                 self.process_define_new_refval(state, bit_operator, member)
                 continue
 
@@ -349,10 +358,10 @@ class Coder(object):
         :param bit_operator:
         :param descriptor:
         """
-        log.debug('Defining new reference value for '.format(descriptor))
+        log.debug('Defining new reference value for {}'.format(descriptor))
         if descriptor.unit == UNITS_STRING:
             raise PyBufrKitError('Cannot define new reference value for descriptor of string value')
-        self.process_new_refval(bit_operator, descriptor, state.nbits_of_new_refval)
+        self.process_new_refval(state, bit_operator, descriptor, state.nbits_of_new_refval)
 
     def process_skipped_local_descriptor(self, state, bit_operator, descriptor):
         """

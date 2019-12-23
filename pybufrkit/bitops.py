@@ -45,6 +45,10 @@ class BitReader(object):
     def read_bin(self, nbits):
         """Read number of bits as bytes representation of binary number"""
 
+    @abc.abstractmethod
+    def read_int(self, nbits):
+        """Read number of bits as integer"""
+
     def read_uint_or_none(self, nbits):
         value = self.read_uint(nbits)
         if nbits > 1 and value == NUMERIC_MISSING_VALUES[nbits]:
@@ -139,7 +143,7 @@ class BitStringBitReader(BitReader):
         return self._bit_stream_read('bytes:{}'.format(nbytes))
 
     def read_uint(self, nbits):
-        fmt_string = ('uintbe:{}' if nbits % 8 == 0 else 'uint:{}').format(nbits)
+        fmt_string = ('uintbe:{}' if nbits % NBITS_PER_BYTE == 0 else 'uint:{}').format(nbits)
         return self._bit_stream_read(fmt_string)
 
     def read_bool(self):
@@ -147,6 +151,9 @@ class BitStringBitReader(BitReader):
 
     def read_bin(self, nbits):
         return self._bit_stream_read('bin:{}'.format(nbits))
+
+    def read_int(self, nbits):
+        return (-1 if self.read_bool() else 1) * self.read_uint(nbits - 1)
 
 
 class BitStringBitWriter(BitWriter):
@@ -198,8 +205,8 @@ class BitStringBitWriter(BitWriter):
 
     def write_int(self, value, nbits):
         value = int(value)
-        self.bit_stream += ('intbe:{}={}' if nbits % NBITS_PER_BYTE == 0 else
-                            'int:{}={}').format(nbits, value)
+        self.write_bool(value < 0)
+        self.write_uint(abs(value), nbits - 1)
         return value
 
     def write_bool(self, value):
