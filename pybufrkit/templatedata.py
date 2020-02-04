@@ -22,7 +22,8 @@ from pybufrkit.descriptors import (ElementDescriptor,
                                    DelayedReplicationDescriptor,
                                    OperatorDescriptor,
                                    SequenceDescriptor,
-                                   SkippedLocalDescriptor)
+                                   SkippedLocalDescriptor,
+                                   UndefinedElementDescriptor)
 
 
 class DataNode(object):
@@ -404,6 +405,10 @@ class TemplateData(object):
                 self.wire_sequence_descriptor(member)
 
             elif isinstance(member, SkippedLocalDescriptor):
+                self.wire_skippable_local_descriptor()
+
+            elif isinstance(member, UndefinedElementDescriptor):
+                # TODO: assume any undefined element descriptor here is a skipped local
                 self.wire_skippable_local_descriptor()
 
             else:

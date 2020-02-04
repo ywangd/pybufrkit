@@ -299,6 +299,7 @@ def _descriptors_from_ids_iter(b, c, r, d, next_id):
             descriptors.append(descriptor)
 
         else:  # element descriptor
+            # TODO: if this descriptor is preceded by a 206XXX, it should turn into skipped local
             descriptors.append(b.lookup(id_))
 
     return descriptors
