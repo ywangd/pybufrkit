@@ -294,7 +294,7 @@ class Decoder(Coder):
         nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
 
         if min_value in (b'\0' * nbytes_min_value or b'\xff' * nbytes_min_value):
-            min_value = ''
+            min_value = b''
 
         # special cases: all missing or all equals
         if min_value is None or nbits_diff == 0:
