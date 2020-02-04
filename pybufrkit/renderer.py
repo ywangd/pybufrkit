@@ -13,7 +13,7 @@ from collections import OrderedDict
 from six.moves import range, zip
 
 from pybufrkit.constants import INDENT_CHARS, PARAMETER_TYPE_TEMPLATE_DATA
-from pybufrkit.errors import PyBufrKitError, UnknownDescriptor
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.utils import fixed_width_repr_of_int
 from pybufrkit.bufr import BufrMessage
 from pybufrkit.descriptors import (Descriptor, ElementDescriptor, FixedReplicationDescriptor,
