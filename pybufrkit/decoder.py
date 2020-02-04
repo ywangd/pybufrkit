@@ -293,10 +293,8 @@ class Decoder(Coder):
         min_value = bit_reader.read_bytes(nbytes_min_value)
         nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
 
-        if nbits_diff:  # non-zero nbits_diff
-            assert min_value == b'\0' * nbytes_min_value, (
-                '{}: Different string must be compressed'
-                ' with empty min value'.format(descriptor))
+        if min_value in (b'\0' * nbytes_min_value or b'\xff' * nbytes_min_value):
+            min_value = ''
 
         # special cases: all missing or all equals
         if min_value is None or nbits_diff == 0:
@@ -306,7 +304,8 @@ class Decoder(Coder):
                 decoded_values.append(min_value)
         else:
             for decoded_values in state.decoded_values_all_subsets:
-                decoded_values.append(bit_reader.read_bytes(nbits_diff))
+                diff_value = bit_reader.read_bytes(nbits_diff)
+                decoded_values.append(min_value + diff_value)
 
     def process_codeflag(self, state, bit_reader, descriptor, nbits):
         (self.process_codeflag_compressed if state.is_compressed else
