@@ -167,7 +167,7 @@ class FlatTextRenderer(Renderer):
             lines.append('{}{} {} bits'.format(indent, descriptor, descriptor.nbits))
 
         else:
-            raise UnknownDescriptor('{}'.format(descriptor))
+            lines.append('{}{} (UNDEFINED)'.format(indent, descriptor))
 
         return lines
 

@@ -372,9 +372,6 @@ class UndefinedDescriptor(Descriptor):
     def __init__(self, id_):
         super(UndefinedDescriptor, self).__init__(id_)
 
-    def __str__(self):
-        return 'UNDEFINED ({:06d})'.format(self.id)
-
 
 class UndefinedElementDescriptor(UndefinedDescriptor):
     pass
