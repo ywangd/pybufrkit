@@ -192,7 +192,7 @@ class CoderState(object):
             value = self.decoded_values[idx]
 
         if value is None or value < 0:
-            raise PyBufrKitError('Delayed replication factor must be >= 0: ({!r})'.format(value))
+            raise PyBufrKitError('Delayed replication factor must be >= 0: got ({!r})'.format(value))
 
         return value
 

@@ -9,6 +9,9 @@ class PyBufrKitError(Exception):
     This is the root exception object of the package.
     """
 
+    def __init__(self, message=''):
+        self.message = message
+
     def __str__(self):
         return 'Error: {}'.format(self.message)
 
