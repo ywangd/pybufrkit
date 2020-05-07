@@ -6,6 +6,7 @@ pybufrkit.decoder
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
 import functools
 import logging
 # noinspection PyUnresolvedReferences
@@ -388,7 +389,8 @@ class Decoder(Coder):
 DATA_CATEGORY_DEFINE_BUFR_TABLES = 11
 
 
-def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
+def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False,
+                          *args, **kwargs):
     """
     This is a generator function that processes the given string for one
     or more BufrMessage till it is exhausted.
@@ -402,18 +404,32 @@ def generate_bufr_message(decoder, s, info_only=False, *args, **kwargs):
         idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
         if idx_start < 0:
             return
-        bufr_message = decoder.process(
-            s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
-        )
-        # If data section is not decoded, we rely on the declared length for the message length
-        if info_only:
-            bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
-        else:
-            if (bufr_message.data_category.value == DATA_CATEGORY_DEFINE_BUFR_TABLES
-                    and bufr_message.n_subsets.value > 0):
-                _, b_entries, d_entries = BufrTableDefinitionProcessor().process(bufr_message)
-                TableGroupCacheManager.invalidate()
-                TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
-        idx_start += len(bufr_message.serialized_bytes)
+        try:
+            bufr_message = decoder.process(
+                s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
+            )
+            # If data section is not decoded, we rely on the declared length for the message length
+            if info_only:
+                bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
+            else:
+                if (bufr_message.data_category.value == DATA_CATEGORY_DEFINE_BUFR_TABLES
+                        and bufr_message.n_subsets.value > 0):
+                    _, b_entries, d_entries = BufrTableDefinitionProcessor().process(bufr_message)
+                    TableGroupCacheManager.invalidate()
+                    TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
+            idx_start += len(bufr_message.serialized_bytes)
 
-        yield bufr_message
+            yield bufr_message
+        except PyBufrKitError as e:
+            if not continue_on_error:
+                raise e
+            print('Continuing on next message and ignoring error: {}'.format(e), file=sys.stderr)
+            if info_only:
+                idx_start += 1
+            else:
+                try:
+                    bufr_message = decoder.process(
+                        s[idx_start:], start_signature=None, info_only=True, *args, **kwargs)
+                    idx_start += bufr_message.length.value
+                except PyBufrKitError as e:
+                    idx_start += 1

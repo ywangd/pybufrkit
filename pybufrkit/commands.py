@@ -60,6 +60,7 @@ def command_decode(ns):
 
         if ns.multiple_messages:
             for bufr_message in generate_bufr_message(decoder, s,
+                                                      continue_on_error=ns.continue_on_error,
                                                       file_path=filename, wire_template_data=False,
                                                       ignore_value_expectation=ns.ignore_value_expectation):
                 show_message(bufr_message)
@@ -91,13 +92,13 @@ def command_info(ns):
             s = ins.read()
 
         if ns.multiple_messages:
-            for bufr_message in generate_bufr_message(decoder, s,
+            for bufr_message in generate_bufr_message(decoder, s, continue_on_error=ns.continue_on_error,
                                                       file_path=filename, info_only=True):
                 show_message_info(bufr_message)
 
         elif ns.count_only:
             count = 0
-            for _ in generate_bufr_message(decoder, s, info_only=True):
+            for _ in generate_bufr_message(decoder, s, continue_on_error=ns.continue_on_error, info_only=True):
                 count += 1
             print('{}: {}'.format(filename, count))
 
@@ -161,7 +162,8 @@ def command_split(ns):
             s = ins.read()
 
         for idx, bufr_message in enumerate(
-                generate_bufr_message(decoder, s, file_path=filename, info_only=True)):
+                generate_bufr_message(decoder, s, continue_on_error=ns.continue_on_error,
+                                      file_path=filename, info_only=True)):
             new_filename = '{}.{}'.format(filename, idx)
             print(new_filename)
             with open(new_filename, 'wb') as outs:
