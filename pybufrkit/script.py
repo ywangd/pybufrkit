@@ -119,7 +119,8 @@ class ScriptRunner(object):
     """
 
     def __init__(self, input_string,
-                 data_values_nest_level=None):
+                 data_values_nest_level=None,
+                 mode='exec'):
         self.code_string, self.substitutions = process_embedded_query_expr(input_string)
 
         self.pragma = {
@@ -132,7 +133,8 @@ class ScriptRunner(object):
         if data_values_nest_level is not None:
             self.pragma['data_values_nest_level'] = data_values_nest_level
 
-        self.code_object = compile(self.code_string, '', 'exec')
+        self.mode = mode
+        self.code_object = compile(self.code_string, '', mode)
 
         self.metadata_only = True
         for query_str in self.substitutions.keys():
@@ -143,6 +145,14 @@ class ScriptRunner(object):
         self.querent = BufrMessageQuerent()
 
     def run(self, bufr_message):
+        variables = self.prepare_variables(bufr_message)
+        if self.mode == 'exec':
+            exec (self.code_object, variables)
+            return variables
+        else:
+            return eval(self.code_object, variables)
+
+    def prepare_variables(self, bufr_message):
         variables = {
             varname: self.get_query_result(bufr_message, query_string)
             for query_string, varname in self.substitutions.items()
@@ -153,9 +163,6 @@ class ScriptRunner(object):
                 'PBK_FILENAME': bufr_message.filename,
             }
         )
-
-        exec (self.code_object, variables)
-
         return variables
 
     def get_query_result(self, bufr_message, query_expr):

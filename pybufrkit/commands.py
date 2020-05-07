@@ -62,7 +62,8 @@ def command_decode(ns):
             for bufr_message in generate_bufr_message(decoder, s,
                                                       continue_on_error=ns.continue_on_error,
                                                       file_path=filename, wire_template_data=False,
-                                                      ignore_value_expectation=ns.ignore_value_expectation):
+                                                      ignore_value_expectation=ns.ignore_value_expectation,
+                                                      filter_expr=ns.filter):
                 show_message(bufr_message)
         else:
 

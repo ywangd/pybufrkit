@@ -96,6 +96,8 @@ def main():
                                action='store_true',
                                help='Skip erroneous message and continue to decode the next one. '
                                     'Only takes effect when working with multiple messages, i.e. with -m switch.')
+    decode_parser.add_argument('--filter',
+                               help='Only decode messages that match the filter expression')
 
     encode_parser = subparsers.add_parser('encode',
                                           help='Encode given JSON file to BUFR')

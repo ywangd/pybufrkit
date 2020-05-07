@@ -27,8 +27,10 @@ from pybufrkit.templatedata import TemplateData
 from pybufrkit.coder import Coder, CoderState
 from pybufrkit.dataprocessor import BufrTableDefinitionProcessor
 from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
+from pybufrkit.script import ScriptRunner
 
 __all__ = ['Decoder', 'generate_bufr_message']
+
 
 log = logging.getLogger(__file__)
 
@@ -389,7 +391,7 @@ class Decoder(Coder):
 DATA_CATEGORY_DEFINE_BUFR_TABLES = 11
 
 
-def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False,
+def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False, filter_expr=None,
                           *args, **kwargs):
     """
     This is a generator function that processes the given string for one
@@ -399,15 +401,27 @@ def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False,
     :param bytes s: String to decode for messages
     :return: BufrMessage object
     """
+    sr = ScriptRunner(filter_expr, mode='eval') if filter_expr is not None else None
     idx_start = 0
     while idx_start < len(s):
         idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
         if idx_start < 0:
             return
         try:
-            bufr_message = decoder.process(
-                s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
-            )
+            matched = True
+            if filter_expr:
+                bufr_message = decoder.process(
+                    s[idx_start:], start_signature=None, info_only=True, *args, **kwargs
+                )
+                matched = sr.run(bufr_message)
+                if matched and not info_only:
+                    bufr_message = decoder.process(
+                        s[idx_start:], start_signature=None, info_only=False, *args, **kwargs
+                    )
+            else:
+                bufr_message = decoder.process(
+                    s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
+                )
             # If data section is not decoded, we rely on the declared length for the message length
             if info_only:
                 bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
@@ -419,7 +433,9 @@ def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False,
                     TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
             idx_start += len(bufr_message.serialized_bytes)
 
-            yield bufr_message
+            if matched:
+                yield bufr_message
+
         except PyBufrKitError as e:
             if not continue_on_error:
                 raise e

@@ -91,7 +91,7 @@ class Encoder(Coder):
 
         if isinstance(s, (six.binary_type, six.text_type)):
             # TODO: ensure all strings are loaded as plain ascii instead of unicode from JSON
-            json_data = json.loads(s, encoding='latin-1')
+            json_data = json.loads(s) if six.PY3 else json.loads(s, encoding='latin-1')
         else:
             json_data = s
 
