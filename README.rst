@@ -71,8 +71,8 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
     pybufrkit decode -m --continue-on-error FILE
 
     # Filter through a multi-message file and only decode messages
-    # that have data_category equals to 2
-    # skipping any erroneous messages and continue on next one
+    # that have data_category equals to 2. See below for details
+    # about usable filter expressions.
     pybufrkit decode -m --filter '${%data_category} == 2' FILE
 
     # Decode a BUFR file and display it in a hierarchical structure

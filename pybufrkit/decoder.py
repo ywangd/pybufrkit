@@ -447,5 +447,5 @@ def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False, 
                     bufr_message = decoder.process(
                         s[idx_start:], start_signature=None, info_only=True, *args, **kwargs)
                     idx_start += bufr_message.length.value
-                except PyBufrKitError as e:
+                except PyBufrKitError:
                     idx_start += 1
