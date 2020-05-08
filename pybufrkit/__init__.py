@@ -33,7 +33,7 @@ from pybufrkit.errors import (BitReadError,
                               UnknownDescriptor,
                               PyBufrKitError)
 
-__version__ = '0.2.14'
+__version__ = '0.2.15'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -92,6 +92,12 @@ def main():
                                type=int,
                                help='The maximum number of compiled templates to cache. '
                                     'A value greater than 0 is needed to activate template compilation.')
+    decode_parser.add_argument('--continue-on-error',
+                               action='store_true',
+                               help='Skip erroneous message and continue to decode the next one. '
+                                    'Only takes effect when working with multiple messages, i.e. with -m switch.')
+    decode_parser.add_argument('--filter',
+                               help='Only decode messages that match the filter expression')
 
     encode_parser = subparsers.add_parser('encode',
                                           help='Encode given JSON file to BUFR')
@@ -130,12 +136,20 @@ def main():
                              help='Each given file could have one or more messages')
     info_parser.add_argument('-c', '--count-only', action='store_true',
                              help='Only count number of messages in the file')
+    info_parser.add_argument('--continue-on-error',
+                             action='store_true',
+                             help='Skip erroneous message and continue to decode the next one. '
+                                  'Only takes effect when working with multiple messages, i.e. with -m switch.')
 
     split_parser = subparsers.add_parser(
         'split',
         help='Split given files so each file contains a single BUFR Message per file.')
     split_parser.add_argument('filenames', metavar='filename', nargs='+',
                               help='BUFR files to split')
+    split_parser.add_argument('--continue-on-error',
+                              action='store_true',
+                              help='Skip erroneous message and continue to decode the next one. '
+                                   'Only takes effect when working with multiple messages, i.e. with -m switch.')
 
     lookup_parser = subparsers.add_parser(
         'lookup',
@@ -280,16 +294,16 @@ def main():
             command_script(ns)
 
         else:
-            print('Unknown command: {}'.format(ns.command))
+            print('Unknown command: {}'.format(ns.command), file=sys.stderr)
 
     except (UnknownDescriptor, BitReadError) as e:
-        print(e)
+        print(e, file=sys.stderr)
 
     except (PathExprParsingError, QueryError) as e:
-        print(e)
+        print(e, file=sys.stderr)
 
     except PyBufrKitError as e:
-        print(e)
+        print(e, file=sys.stderr)
 
     except IOError as e:
-        print('Error: {}: {}'.format(e.strerror, e.filename))
+        print('Error: {}: {}'.format(e.strerror, e.filename), file=sys.stderr)
