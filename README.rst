@@ -66,6 +66,15 @@ to the help option, e.g. ``pybufrkit decode -h``. Also checkout the
     # Decode a BUFR file and output in the default flat text format
     pybufrkit decode BUFR_FILE
 
+    # Decode a file that is a concatenation of multiple BUFR messages,
+    # skipping any erroneous messages and continue on next one
+    pybufrkit decode -m --continue-on-error FILE
+
+    # Filter through a multi-message file and only decode messages
+    # that have data_category equals to 2
+    # skipping any erroneous messages and continue on next one
+    pybufrkit decode -m --filter '${%data_category} == 2' FILE
+
     # Decode a BUFR file and display it in a hierarchical structure
     # corresponding to the BUFR Descriptors. In addition, the attribute
     # descriptors are associated to their (bitmap) corresponding descriptors.
