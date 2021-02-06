@@ -107,7 +107,9 @@ def main():
     encode_parser.add_argument('output_filename',
                                metavar='output_file',
                                nargs='?', default='out.bufr',
-                               help='The output BUFR file, default out.bufr')
+                               help='The output BUFR file, default to out.bufr')
+    encode_parser.add_argument('--append', action='store_true',
+                               help='Append to the end of the output file')
     encode_parser.add_argument('-j', '--json', action='store_true',
                                help='The input is in JSON format')
     encode_parser.add_argument('-a', '--attributed', action='store_true',

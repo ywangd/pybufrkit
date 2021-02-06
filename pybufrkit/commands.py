@@ -146,8 +146,12 @@ def command_encode(ns):
     bufr_message = encoder.process(data, '<stdin>' if ns.filename else ns.filename,
                                    wire_template_data=False)
     if ns.output_filename:
-        with open(ns.output_filename, 'wb') as outs:
-            outs.write(bufr_message.serialized_bytes)
+        if ns.append:
+            with open(ns.output_filename, 'ab') as outs:
+                outs.write(bufr_message.serialized_bytes)
+        else:
+            with open(ns.output_filename, 'wb') as outs:
+                outs.write(bufr_message.serialized_bytes)
 
 
 def command_split(ns):
