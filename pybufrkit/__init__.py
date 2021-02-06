@@ -33,7 +33,7 @@ from pybufrkit.errors import (BitReadError,
                               UnknownDescriptor,
                               PyBufrKitError)
 
-__version__ = '0.2.17'
+__version__ = '0.2.18'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
@@ -124,6 +124,8 @@ def main():
                                type=int,
                                help='The maximum number of compiled templates to cache. '
                                     'A value greater than 0 is needed to activate template compilation.')
+    encode_parser.add_argument('--preamble', type=str,
+                               help='A prefix string added to the beginning of the output file (with utf-8 encoding)')
 
     info_parser = subparsers.add_parser('info',
                                         help='Show BUFR file information')

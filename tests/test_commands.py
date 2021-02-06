@@ -25,7 +25,23 @@ def test_command_encode_with_append():
     output_file = os.path.join(output_dir, 'out.bufr')
     with open(output_file, 'wb') as outs:
         outs.write(b'IOBI01 SBBR 011100\r\r\n')
-    ns = NS({'filename': input_file, 'output_filename': output_file, 'append': True, 'json': True, ', attributed': False})
+    ns = NS(
+        {'filename': input_file, 'output_filename': output_file, 'append': True, 'json': True, ', attributed': False})
+
+    command_encode(ns)
+    with open(output_file, 'rb') as ins:
+        assert ins.read().startswith(b'IOBI01 SBBR 011100\r\r\n')
+
+    shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_command_encode_with_preamble():
+    input_file = os.path.join(DATA_DIR, 'IUSK73_AMMC_182300.json')
+    output_dir = tempfile.mkdtemp()
+    output_file = os.path.join(output_dir, 'out.bufr')
+    ns = NS(
+        {'filename': input_file, 'output_filename': output_file, 'append': False, 'json': True, ', attributed': False,
+         'preamble': 'IOBI01 SBBR 011100\r\r\n'})
 
     command_encode(ns)
     with open(output_file, 'rb') as ins:
