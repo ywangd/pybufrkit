@@ -7,10 +7,8 @@ import os
 import zipfile
 
 try:  # py3
-    from urllib.parse import urlparse
     from urllib.request import urlopen
 except ImportError:  # py2
-    from urlparse import urlparse
     from urllib2 import urlopen
 
 
