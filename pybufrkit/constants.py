@@ -31,8 +31,8 @@ PARAMETER_TYPE_TEMPLATE_DATA = 'template_data'
 
 BITPOS_START = 'bitpos_start'
 
-# A list of numbers that corresponds to missing values for a number of bits up to 32
-NUMERIC_MISSING_VALUES = [2 ** i - 1 for i in range(33)]
+# A list of numbers that corresponds to missing values for a number of bits up to 64
+NUMERIC_MISSING_VALUES = [2 ** i - 1 for i in range(65)]
 
 
 # Number of bits for represent number of bits used for difference
