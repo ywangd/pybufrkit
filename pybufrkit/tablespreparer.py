@@ -15,17 +15,17 @@ except ImportError:  # py2
 __all__ = ['prepare_wmo_tables']
 
 
-def prepare_wmo_tables(version):
-    data = download_wmo_bufr_tables_release(version)
+def prepare_wmo_tables(version, tag):
+    data = download_wmo_bufr_tables_release(version, tag)
     tables = convert_tables_from_zip(version, data)
     write_tables(version, tables, '.')
 
 
-def download_wmo_bufr_tables_release(version):
+def download_wmo_bufr_tables_release(version, tag):
     """
     Download WMO BUFR4 tables release of the specified version from its GitHub repo
     """
-    download_url = 'https://github.com/wmo-im/BUFR4/archive/refs/tags/v{}.zip'.format(version)
+    download_url = 'https://github.com/wmo-im/BUFR4/archive/refs/tags/v{}.zip'.format(tag)
     print('Downloading WMO tables version {} from {}'.format(version, download_url))
     ins = urlopen(download_url)
     return ins.read()
@@ -101,5 +101,6 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(
         description='Download BUFR tables published by WMO amd convert them to PyBufrKit format')
     ap.add_argument('version', type=int, help='the table version')
+    ap.add_argument('--tag', help='the release tag (same as the table version if not specified')
     ns = ap.parse_args()
-    prepare_wmo_tables(ns.version)
+    prepare_wmo_tables(ns.version, str(ns.version) if ns.tag is None else ns.tag)
