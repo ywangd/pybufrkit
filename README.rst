@@ -29,7 +29,7 @@ An `online BUFR decoder <http://aws-bufr-webapp.s3-website-ap-southeast-2.amazon
 
 Installation
 ------------
-PyBufrKit is compatible with Python 2.7, 3.5+, and `PyPy <https://pypy.org/>`_.
+PyBufrKit is compatible with Python 3.7+ and `PyPy <https://pypy.org/>`_.
 To install from PyPi::
 
     pip install pybufrkit
