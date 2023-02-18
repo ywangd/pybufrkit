@@ -39,6 +39,7 @@ def convert_tables_from_zip(version, data):
     table_code_and_flag = {}
     for fileinfo in zf.infolist():
         if fileinfo.filename.startswith('BUFR4-{}{}BUFRCREX_TableB_en_'.format(version, os.path.sep)):
+            print('Table B: ' + fileinfo.filename)
             table_b.update(process_table_b(zf.read(fileinfo).decode('utf-8')))
         elif fileinfo.filename.startswith('BUFR4-{}{}BUFR_TableD_en_'.format(version, os.path.sep)):
             table_d.update(process_table_d(zf.read(fileinfo).decode('utf-8')))
@@ -69,11 +70,13 @@ def write_tables(version, tables, output_dir):
 def process_table_b(content):
     lines = csv.reader(io.StringIO(content), quoting=csv.QUOTE_MINIMAL)
     next(lines)  # skip header
+    # WMO output is inconsistent and can have extra comma after 3rd column (name)
+    offset = 0
     d = {}
     for line in lines:
-        crex_scale = 0 if line[10] == '' else int(line[10])
-        crex_data_width = 0 if line[11] == '' else int(line[11])
-        d[line[2]] = [line[3], line[5], int(line[6]), int(line[7]), int(line[8]), line[9], crex_scale, crex_data_width]
+        crex_scale = 0 if line[9 + offset] == '' else int(line[9 + offset])
+        crex_data_width = 0 if line[10 + offset] == '' else int(line[10 + offset])
+        d[line[2]] = [line[3], line[4 + offset], int(line[5 + offset]), int(line[6 + offset]), int(line[7 + offset]), line[8 + offset], crex_scale, crex_data_width]
     return d
 
 
