@@ -310,7 +310,7 @@ class QueryResult(object):
             return list(self.results.values())
 
     def __iter__(self):
-        return iter(self.results.viewitems())
+        return iter(self.results.items())
 
 
 NODE_NOT_MATCH = 0
