@@ -2,8 +2,8 @@
 name: ci
 on:
   push:
-    branches:
-      - master
+#    branches:
+#      - master
   pull_request:
     branches:
       - master
@@ -19,4 +19,3 @@ jobs:
     - run: pip install pytest ruff .
     - run: ruff --format=github --ignore=E501 --target-version=py37 .
     - run: pytest
-   
