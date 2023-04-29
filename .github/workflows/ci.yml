@@ -2,20 +2,26 @@
 name: ci
 on:
   push:
-#    branches:
-#      - master
+    branches:
+      - master
   pull_request:
     branches:
       - master
 jobs:
   ci:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "pypy-3.9"]
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
-        python-version: 3.x
+        python-version: ${{ matrix.python-version }}
     - run: pip install --upgrade pip
-    - run: pip install pytest ruff .
-    - run: ruff --format=github --ignore=E501 --target-version=py37 .
+    - if: ${{ matrix.python-version }} == "3.11"
+      run: pip install ruff && ruff --format=github --ignore=E501 --target-version=py37 .
+    - run: pip install pytest .
     - run: pytest
