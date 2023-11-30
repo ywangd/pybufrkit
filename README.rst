@@ -34,6 +34,10 @@ To install from PyPi::
 
     pip install pybufrkit
 
+Or from `conda-forge <https://conda-forge.org>`_::
+
+    conda install -c conda-forge pybufrkit
+
 Or from source::
 
     python setup.py install
