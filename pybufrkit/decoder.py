@@ -273,6 +273,9 @@ class Decoder(Coder):
         else:
             for decoded_values in state.decoded_values_all_subsets:
                 diff = bit_reader.read_uint_or_none(nbits_diff)
+                # A one-bit increment of value one is considered as missing
+                if diff == 1 and nbits_diff == 1:
+                    diff = None
                 if diff is None:
                     value = None
                 else:
@@ -332,6 +335,9 @@ class Decoder(Coder):
         else:
             for decoded_values in state.decoded_values_all_subsets:
                 diff = bit_reader.read_uint_or_none(nbits_diff)
+                # A one-bit increment of value one is considered as missing
+                if diff == 1 and nbits_diff == 1:
+                    diff = None
                 if diff is None:
                     value = None
                 else:

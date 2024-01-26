@@ -54,7 +54,7 @@ class DecoderTests(unittest.TestCase):
                 if value is None:
                     line = '{} {}'.format(idx + 1, repr(value))
                     assert line == cmp_line, \
-                        'At line {}: {} != {}'.format(idx + 1, line, cmp_line)
+                        'At file {} line {}: {} != {}'.format(cmp_file_name, idx + 1, line, cmp_line)
                 elif isinstance(value, (binary_type, text_type)):
                     # TODO: better to decode all ascii bytes to unicode string
                     if isinstance(value, binary_type) and PY3:
@@ -62,14 +62,14 @@ class DecoderTests(unittest.TestCase):
                     else:
                         line = '{} {}'.format(idx + 1, repr(value))
                     assert line == cmp_line, \
-                        'At line {}: {} != {}'.format(idx + 1, line, cmp_line)
+                        'At file {} line {}: {} != {}'.format(cmp_file_name, idx + 1, line, cmp_line)
                 else:
                     field = cmp_line.split()[1]
                     if field.endswith('L'):
                         field = field[:-1]
                     cmp_value = eval(field)
                     assert abs(value - cmp_value) < 1.0e6, \
-                        'At line {}: {} != {}'.format(idx + 1, value, cmp_value)
+                        'At file {} line {}: {} != {}'.format(cmp_file_name, idx + 1, value, cmp_value)
 
     def _print_values(self, bufr_message):
         for idx_subset in range(len(bufr_message.template_data.value.decoded_values_all_subsets)):
