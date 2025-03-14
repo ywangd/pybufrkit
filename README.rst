@@ -2,7 +2,7 @@ Python Toolkit for WMO BUFR Messages
 ====================================
 
 .. image:: https://github.com/ywangd/pybufrkit/actions/workflows/ci.yml/badge.svg
-    :target: https://travis-ci.org/ywangd/pybufrkit
+    :target: https://github.com/ywangd/pybufrkit
 
 `PyBufrKit <https://github.com/ywangd/pybufrkit>`_ is a **pure** Python package
 to work with WMO BUFR (FM-94) messages. It can be used as both a
