@@ -147,7 +147,15 @@ class Encoder(Coder):
             elif parameter.type == PARAMETER_TYPE_TEMPLATE_DATA:
                 self.process_template_data(bufr_message, bit_writer, parameter)
             else:
-                bit_writer.write(parameter.value, parameter.type, parameter.nbits)
+                if parameter.nbits == 0:
+                    if parameter.value is None:
+                        continue
+                    if parameter.type == 'bytes':
+                        bit_writer.write_bytes(parameter.value, len(parameter.value))
+                    else:
+                        bit_writer.write(parameter.value, parameter.type, parameter.nbits)
+                else:
+                    bit_writer.write(parameter.value, parameter.type, parameter.nbits)
 
             log.debug('{} = {!r}'.format(parameter.name, parameter.value))
 

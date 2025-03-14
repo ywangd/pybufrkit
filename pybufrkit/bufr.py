@@ -27,7 +27,7 @@ class SectionParameter(object):
     This class represents a Parameter of a Bufr Section.
     """
 
-    def __init__(self, name, nbits, data_type, expected, as_property, value=None):
+    def __init__(self, name, nbits, data_type, expected, as_property, optional=False, value=None):
         # type: (str, int, str, object, bool) -> None
         self.name = name
         self.nbits = nbits
@@ -38,8 +38,12 @@ class SectionParameter(object):
             expected = expected.encode('utf-8')
         self.expected = expected
         self.as_property = as_property
+        self.optional = optional
         self.parent = None  # the section that parameter belongs to
         self.value = value
+
+    def __str__(self):
+        return 'name={}, type={}, nbits={}, value={}'.format(self.name, self.type, self.nbits, self.value)
 
 
 class SectionNamespace(OrderedDict):
@@ -126,6 +130,9 @@ class BufrSection(object):
         else:
             raise PyBufrKitError('Parameter "{}" not found'.format(parameter_name))
 
+    def has_optional_last_parameter(self):
+        return list(self._namespace.values())[-1].optional
+
 
 # An indicator for using the fallback default edition of a section
 DEFAULT_SECTION_EDITION = 0
@@ -183,18 +190,25 @@ class SectionConfigurer(object):
         section.set_metadata('optional', config.get('optional', False))
         section.set_metadata('end_of_message', config.get('end_of_message', False))
 
-        for parameter in config['parameters']:
+        for idx, parameter in enumerate(config['parameters']):
             data_type = parameter['type']
             nbits = parameter['nbits']
             if data_type == 'bytes':
                 assert nbits % NBITS_PER_BYTE == 0, \
                     'nbits for bytes type must be integer multiple of 8: {}'.format(nbits)
+            if nbits == 0:
+                assert data_type in ('bin', 'bytes', 'unexpanded_descriptors', 'template_data'), \
+                    'section {} parameter {} with nbits 0 has incorrect data type {}'.format(
+                                                                                          section_index, parameter['name'], data_type)
+                assert idx == len(config['parameters']) - 1, \
+                    'section {} parameter {} with nbits 0 must be at the end'.format(section_index, parameter['name'])
             section_parameter = SectionParameter(
                 parameter['name'],
                 nbits,
                 data_type,
                 parameter.get('expected', None),
-                parameter.get('as_property', False)
+                parameter.get('as_property', False),
+                parameter.get('optional', False)
             )
             section.add_parameter(section_parameter)
 
@@ -242,11 +256,15 @@ class SectionConfigurer(object):
         """
         section = self.configure_section(bufr_message, section_index)
         if section is not None:
-            assert len(section) == len(values), \
-                'Number of Section parameters ({}) not equal to number of values to be encoded ({})'.format(
+            if section.has_optional_last_parameter():
+                assert len(section) == len(values) or len(section) == len(values) + 1, \
+                    'Inconsistent number of section parameters {} and number of values {}'.format(len(section), len(values))
+            else:
+                assert len(section) == len(values), \
+                    'Number of Section parameters ({}) not equal to number of values to be encoded ({})'.format(
                     len(section), len(values))
-            for idx, parameter in enumerate(section):
-                parameter.value = values[idx] if overrides is None else overrides.get(parameter.name, values[idx])
+            for idx, (parameter, value) in enumerate(zip(section, values)):
+                parameter.value = value if overrides is None else overrides.get(parameter.name, value)
 
         return section
 

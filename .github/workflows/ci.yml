@@ -22,6 +22,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - run: pip install --upgrade pip
     - if: ${{ matrix.python-version }} == "3.11"
-      run: pip install ruff && ruff --output-format=github --ignore=E501 --target-version=py37 .
+      run: pip install ruff && ruff check --output-format=github --ignore=E501 --target-version=py37 .
     - run: pip install pytest .
     - run: pytest
