@@ -8,15 +8,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import json
-import os
 import logging
-import six
-from copy import deepcopy
+import os
 from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
 
-from pybufrkit.errors import PyBufrKitError
+import six
+
 from pybufrkit.constants import BASE_DIR, NBITS_PER_BYTE, PARAMETER_TYPE_TEMPLATE_DATA
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.tables import TableGroupCacheManager
 
 log = logging.getLogger(__file__)
@@ -193,13 +194,16 @@ class SectionConfigurer(object):
         for idx, parameter in enumerate(config['parameters']):
             data_type = parameter['type']
             nbits = parameter['nbits']
+            optional = parameter.get('optional', False)
             if data_type == 'bytes':
                 assert nbits % NBITS_PER_BYTE == 0, \
                     'nbits for bytes type must be integer multiple of 8: {}'.format(nbits)
-            if nbits == 0:
+            if nbits == 0 or optional:
+                assert nbits == 0, 'section {} optional parameter {} must have 0 bits, but got {}'.format(
+                    section_index, parameter['name'], nbits)
                 assert data_type in ('bin', 'bytes', 'unexpanded_descriptors', 'template_data'), \
                     'section {} parameter {} with nbits 0 has incorrect data type {}'.format(
-                                                                                          section_index, parameter['name'], data_type)
+                        section_index, parameter['name'], data_type)
                 assert idx == len(config['parameters']) - 1, \
                     'section {} parameter {} with nbits 0 must be at the end'.format(section_index, parameter['name'])
             section_parameter = SectionParameter(
@@ -208,15 +212,15 @@ class SectionConfigurer(object):
                 data_type,
                 parameter.get('expected', None),
                 parameter.get('as_property', False),
-                parameter.get('optional', False)
+                optional
             )
             section.add_parameter(section_parameter)
 
         # Check whether this section is optional. If it is optional, check whether it exists in the
         # current message.
         is_section_presents = (
-            not section.optional or
-            getattr(bufr_message, 'is_section{}_presents'.format(section_index)).value
+                not section.optional or
+                getattr(bufr_message, 'is_section{}_presents'.format(section_index)).value
         )
 
         # If the section exists, add the section for process other wise ignore it
@@ -258,11 +262,12 @@ class SectionConfigurer(object):
         if section is not None:
             if section.has_optional_last_parameter():
                 assert len(section) == len(values) or len(section) == len(values) + 1, \
-                    'Inconsistent number of section parameters {} and number of values {}'.format(len(section), len(values))
+                    'Inconsistent number of section parameters {} and number of values {}'.format(len(section),
+                                                                                                  len(values))
             else:
                 assert len(section) == len(values), \
                     'Number of Section parameters ({}) not equal to number of values to be encoded ({})'.format(
-                    len(section), len(values))
+                        len(section), len(values))
             for idx, (parameter, value) in enumerate(zip(section, values)):
                 parameter.value = value if overrides is None else overrides.get(parameter.name, value)
 

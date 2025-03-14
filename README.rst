@@ -1,7 +1,7 @@
 Python Toolkit for WMO BUFR Messages
 ====================================
 
-.. image:: https://travis-ci.org/ywangd/pybufrkit.svg?branch=master
+.. image:: https://github.com/ywangd/pybufrkit/actions/workflows/ci.yml/badge.svg
     :target: https://travis-ci.org/ywangd/pybufrkit
 
 `PyBufrKit <https://github.com/ywangd/pybufrkit>`_ is a **pure** Python package
