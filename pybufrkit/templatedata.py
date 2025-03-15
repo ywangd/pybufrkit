@@ -235,7 +235,8 @@ class TemplateData(object):
         else:
             if descriptor.X == 33 and self.waiting_for_qa_info_meaning:
                 node = self.add_node(QualityInfoNode(*self.get_next_descriptor_and_index()))
-                self.index_to_node[self.bitmap_links[node.index]].add_attribute(node)
+                if node.index in self.bitmap_links:
+                    self.index_to_node[self.bitmap_links[node.index]].add_attribute(node)
 
             else:
                 node = self.add_value_node()

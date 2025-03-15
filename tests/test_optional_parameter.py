@@ -48,7 +48,7 @@ data = [
 ]
 
 
-def test_overriding_master_table_version():
+def test_optional_parameter():
     encoder = Encoder()
     bufr_message = encoder.process(data)
     assert bufr_message.sections[1].section_length.value == 24

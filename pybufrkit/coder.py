@@ -6,20 +6,20 @@ pybufrkit.coder
 from __future__ import absolute_import
 from __future__ import print_function
 
-import logging
 import abc
 import functools
+import itertools
+import logging
 from collections import namedtuple
 
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
+from pybufrkit.bufr import SectionConfigurer
 from pybufrkit.constants import (DEFAULT_TABLES_DIR,
                                  UNITS_CODE_TABLE,
                                  UNITS_FLAG_TABLE,
                                  UNITS_STRING)
-from pybufrkit.errors import PyBufrKitError, UnknownDescriptor
-from pybufrkit.bufr import SectionConfigurer
 from pybufrkit.descriptors import (ElementDescriptor,
                                    FixedReplicationDescriptor,
                                    DelayedReplicationDescriptor,
@@ -28,6 +28,7 @@ from pybufrkit.descriptors import (ElementDescriptor,
                                    AssociatedDescriptor,
                                    MarkerDescriptor,
                                    SkippedLocalDescriptor)
+from pybufrkit.errors import PyBufrKitError, UnknownDescriptor
 
 # Bitmap definition stage
 BITMAP_NA = 0  # e.g. not in a bitmap definition block
@@ -166,7 +167,8 @@ class CoderState(object):
         self.back_reference_boundary = len(self.decoded_descriptors)
 
     def recall_bitmap(self):
-        self.next_bitmapped_descriptor = functools.partial(next, iter(self.bitmapped_descriptors))
+        self.next_bitmapped_descriptor = functools.partial(next, itertools.chain(self.bitmapped_descriptors,
+                                                                                 itertools.repeat((None, None))))
         return self.bitmap
 
     def cancel_bitmap(self):
@@ -182,6 +184,9 @@ class CoderState(object):
         Must be called before the descriptor is processed
         """
         idx_descriptor, _ = self.next_bitmapped_descriptor()
+        if idx_descriptor is None:
+            log.debug('bit-map has fewer entries than class 33 descriptors')
+            return
         self.bitmap_links[len(self.decoded_descriptors)] = idx_descriptor
 
     def get_value_for_delayed_replication_factor(self, idx):
@@ -221,7 +226,8 @@ class CoderState(object):
                 self.back_referenced_descriptors
             ) if bit == 0
         ]
-        self.next_bitmapped_descriptor = functools.partial(next, iter(self.bitmapped_descriptors))
+        self.next_bitmapped_descriptor = functools.partial(next, itertools.chain(self.bitmapped_descriptors,
+                                                                                 itertools.repeat((None, None))))
 
     def _assert_equal_values_of_index(self, idx):
         """
