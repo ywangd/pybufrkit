@@ -26,7 +26,7 @@ from pybufrkit.commands import (command_compile,
                                 command_query,
                                 command_script,
                                 command_split,
-                                command_subset)
+                                command_subset, command_update_wmo_tables)
 from pybufrkit.errors import (BitReadError,
                               PathExprParsingError,
                               QueryError,
@@ -253,6 +253,12 @@ def main():
                                help='The maximum number of compiled templates to cache. '
                                     'A value greater than 0 is needed to activate template compilation.')
 
+    update_tables_parser = subparsers.add_parser(
+        'update-wmo-tables',
+        help='Update WMO BUFR tables by downloading from the wmo-im GitHub repository')
+    update_tables_parser.add_argument('version', help='Table version to update')
+    update_tables_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing tables')
+
     ns = ap.parse_args()
 
     if ns.info:
@@ -296,6 +302,9 @@ def main():
 
         elif ns.command == 'script':
             command_script(ns)
+
+        elif ns.command == 'update-wmo-tables':
+            command_update_wmo_tables(ns)
 
         else:
             print('Unknown command: {}'.format(ns.command), file=sys.stderr)

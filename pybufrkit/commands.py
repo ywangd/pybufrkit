@@ -14,7 +14,7 @@ import six
 
 from pybufrkit.constants import (UNITS_CODE_TABLE,
                                  UNITS_COMMON_CODE_TABLE_C1,
-                                 UNITS_FLAG_TABLE)
+                                 UNITS_FLAG_TABLE, DEFAULT_TABLES_DIR)
 from pybufrkit.errors import PyBufrKitError
 from pybufrkit.utils import nested_json_to_flat_json, flat_text_to_flat_json, nested_text_to_flat_json
 from pybufrkit.descriptors import ElementDescriptor
@@ -333,3 +333,13 @@ def command_script(ns):
                                        info_only=script_runner.metadata_only)
 
         script_runner.run(bufr_message)
+
+
+def command_update_wmo_tables(ns):
+    from pybufrkit.tablespreparer import prepare_wmo_tables
+    output_dir = os.path.join(ns.tables_root_directory or DEFAULT_TABLES_DIR, '0', '0_0')
+    if os.path.exists(os.path.join(output_dir, ns.version)) and not ns.overwrite:
+        print('Table version "{}" already exists in {}, '
+              'specify --overwrite to force the update'.format(ns.version, output_dir))
+        return
+    prepare_wmo_tables(ns.version, output_dir=output_dir)
