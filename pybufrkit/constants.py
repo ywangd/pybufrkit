@@ -19,7 +19,7 @@ BASE_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(__
 DEFAULT_DEFINITIONS_DIR = os.path.join(BASE_DIR, 'definitions')
 
 # Default directory to load the BUFR tables
-DEFAULT_TABLES_DIR = os.path.join(BASE_DIR, 'tables')
+DEFAULT_TABLES_DIR = os.path.join(BASE_DIR, 'tables/wmo')
 
 NBITS_PER_BYTE = 8
 

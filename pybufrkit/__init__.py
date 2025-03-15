@@ -16,8 +16,8 @@ from __future__ import print_function
 
 import argparse
 import logging
+from pathlib import Path
 import sys
-
 from pybufrkit.commands import (command_compile,
                                 command_decode,
                                 command_encode,
@@ -32,12 +32,17 @@ from pybufrkit.errors import (BitReadError,
                               QueryError,
                               UnknownDescriptor,
                               PyBufrKitError)
+from pybufrkit.constants import DEFAULT_TABLES_DIR
 
 __version__ = '0.2.24'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
 LOGGER.addHandler(logging.NullHandler())  # so testings do not complain about no handler
+
+
+def get_local_table_dir(entity):
+    return Path(DEFAULT_TABLES_DIR).parent / entity
 
 
 def main():
@@ -59,8 +64,11 @@ def main():
     ap.add_argument('-d', '--definitions-directory',
                     help='The directory to locate definition files')
 
-    ap.add_argument('-t', '--tables-root-directory',
-                    help='The directory to locate BUFR tables')
+    group = ap.add_mutually_exclusive_group()
+    group.add_argument('-t', '--tables-root-directory',
+                       help='The directory to locate BUFR tables')
+    group.add_argument('-l', '--local-entity-name',
+                       help='The entity name for local tables')
 
     subparsers = ap.add_subparsers(
         dest='command',
@@ -267,6 +275,9 @@ def main():
         logging_level = logging.DEBUG
     else:
         logging_level = logging.WARN
+
+    if ns.local_entity_name:
+        ns.tables_root_directory = get_local_table_dir(ns.local_entity_name)
 
     logging.basicConfig(
         stream=sys.stdout,
