@@ -553,3 +553,13 @@ class DataQueryTests(unittest.TestCase):
                 [[[[12], [10], [8]]], [[[6], [4]]]]
             ]
         ]
+
+    def test_iterate_query_result(self):
+        s = read_bufr_file('jaso_214.bufr')
+        bufr_message = self.decoder.process(s)
+
+        r1 = self.querent.query(bufr_message, '/301011/004001')
+        it = iter(r1)
+        next(it)
+        next(it)
+        next(it)
