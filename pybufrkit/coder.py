@@ -260,14 +260,17 @@ class Coder(object):
 
     :param definitions_dir: Where to find the BPCL definition files.
     :param tables_root_dir: Where to find the BUFR table files.
+    :param tables_local_dir: Where to find the local BUFR table files.
     """
 
     def __init__(self,
                  definitions_dir=None,
-                 tables_root_dir=None):
+                 tables_root_dir=None,
+                 tables_local_dir=None):
 
         self.section_configurer = SectionConfigurer(definitions_dir=definitions_dir)
         self.tables_root_dir = tables_root_dir or DEFAULT_TABLES_DIR
+        self.tables_local_dir = tables_local_dir or self.tables_root_dir
 
     @abc.abstractmethod
     def process(self, *args, **kwargs):

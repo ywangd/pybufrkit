@@ -353,18 +353,20 @@ class BufrMessage(object):
         """
         self.sections.append(section)
 
-    def build_template(self, tables_root_dir, normalize=1):
+    def build_template(self, tables_root_dir, tables_local_dir=None, normalize=1):
         """
         Build the BufrTemplate object using the list of unexpanded descriptors
         and corresponding table group.
 
         :param tables_root_dir: The root directory to find BUFR tables
+        :param tables_local_dir: The root directory to find local BUFR tables
         :param normalize: Whether to use some default table group if the specific
             one is not available.
         :return: A tuple of BufrTemplate and the associated TableGroup
         """
         table_group = TableGroupCacheManager.get_table_group(
             tables_root_dir=tables_root_dir,
+            tables_local_dir=tables_local_dir,
             master_table_number=self.master_table_number.value,
             originating_centre=self.originating_centre.value,
             originating_subcentre=self.originating_subcentre.value,

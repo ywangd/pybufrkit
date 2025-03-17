@@ -16,6 +16,7 @@ from __future__ import print_function
 
 import argparse
 import logging
+import os
 import sys
 
 from pybufrkit.commands import (command_compile,
@@ -61,6 +62,12 @@ def main():
 
     ap.add_argument('-t', '--tables-root-directory',
                     help='The directory to locate BUFR tables')
+
+    ap.add_argument('-l', '--tables-local-directory',
+                    help='The directory to locate local BUFR tables')
+
+    ap.add_argument('-p', '--tables-local-provider',
+                    help='The provider for local BUFR tables')
 
     subparsers = ap.add_subparsers(
         dest='command',
@@ -260,6 +267,10 @@ def main():
     update_tables_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing tables')
 
     ns = ap.parse_args()
+
+    ns.tables_local_directory = ns.tables_local_directory or ns.tables_root_directory
+    if ns.tables_local_provider:
+        ns.tables_local_directory = os.path.join(ns.tables_local_directory, ns.tables_local_provider)
 
     if ns.info:
         logging_level = logging.INFO
