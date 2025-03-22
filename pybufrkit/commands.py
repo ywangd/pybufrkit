@@ -36,6 +36,7 @@ def command_decode(ns):
     """
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     def show_message(m):
@@ -78,11 +79,13 @@ def command_info(ns):
     """
     flat_text_render = FlatTextRenderer()
     decoder = Decoder(definitions_dir=ns.definitions_directory,
-                      tables_root_dir=ns.tables_root_directory)
+                      tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory)
 
     def show_message_info(m):
         bufr_template, table_group = m.build_template(
-            ns.tables_root_directory, normalize=1)
+            ns.tables_root_directory,
+            ns.tables_local_directory, normalize=1)
 
         print(flat_text_render.render(m))
         if ns.template:
@@ -114,6 +117,7 @@ def command_encode(ns):
     """
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max,
                       master_table_version=ns.master_table_version)
     if ns.filename != '-':
@@ -159,7 +163,8 @@ def command_split(ns):
     BufrMessage.
     """
     decoder = Decoder(definitions_dir=ns.definitions_directory,
-                      tables_root_dir=ns.tables_root_directory)
+                      tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory)
 
     for filename in ns.filenames:
         with open(filename, 'rb') as ins:
@@ -179,6 +184,7 @@ def command_lookup(ns):
     Command to lookup the given descriptors from command line
     """
     table_group = TableGroupCacheManager.get_table_group(ns.tables_root_directory,
+                                                         ns.tables_local_directory,
                                                          ns.master_table_number,
                                                          ns.originating_centre,
                                                          ns.originating_subcentre,
@@ -223,12 +229,15 @@ def command_compile(ns):
 
     if os.path.exists(ns.input):
         decoder = Decoder(definitions_dir=ns.definitions_directory,
-                          tables_root_dir=ns.tables_root_directory)
+                          tables_root_dir=ns.tables_root_directory,
+                          tables_local_dir=ns.tables_local_directory)
         with open(ns.input, 'rb') as ins:
             bufr_message = decoder.process(ins.read(), file_path=ns.input, info_only=True)
-            template, table_group = bufr_message.build_template(ns.tables_root_directory, normalize=1)
+            template, table_group = bufr_message.build_template(ns.tables_root_directory,
+                                                                ns.tables_local_directory, normalize=1)
     else:
         table_group = TableGroupCacheManager.get_table_group(ns.tables_root_directory,
+                                                             ns.tables_local_directory,
                                                              ns.master_table_number,
                                                              ns.originating_centre,
                                                              ns.originating_subcentre,
@@ -247,9 +256,11 @@ def command_subset(ns):
     """
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     subset_indices = [int(x) for x in ns.subset_indices.split(',')]
@@ -272,6 +283,7 @@ def command_query(ns):
     """
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     for filename in ns.filenames:
@@ -322,6 +334,7 @@ def command_script(ns):
 
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
+                      tables_local_dir=ns.tables_local_directory,
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     for filename in ns.filenames:

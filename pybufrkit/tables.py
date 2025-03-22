@@ -45,6 +45,7 @@ __all__ = ['TableGroupKey', 'TableGroupCacheManager']
 log = logging.getLogger(__file__)
 
 TableGroupKey = namedtuple('TableGroupKey', ['tables_root_dir',
+                                             'tables_local_dir',
                                              'wmo_tables_sn',
                                              'local_tables_sn'])
 
@@ -76,6 +77,7 @@ def get_tables_sn(master_table_number,
 
 
 def normalize_tables_sn(tables_root_dir,
+                        tables_local_dir,
                         master_table_number,
                         originating_centre,
                         originating_subcentre,
@@ -93,6 +95,7 @@ def normalize_tables_sn(tables_root_dir,
     :param local_table_version:
     :param master_table_number:
     :param tables_root_dir:
+    :param tables_local_dir:
     :return: The directory and SN for which tables can actually be found
     :rtype: (str, str)
     """
@@ -129,7 +132,7 @@ def normalize_tables_sn(tables_root_dir,
             '{}_{}'.format(originating_centre, DEFAULT_ORIGINATING_SUBCENTRE),
         ]
         for idx, centres in enumerate(centres_candidates):
-            if os.path.isdir(os.path.join(tables_root_dir,
+            if os.path.isdir(os.path.join(tables_local_dir,
                                           master_table_number_string,
                                           centres,
                                           local_table_version_string)):
@@ -160,10 +163,11 @@ class BaseTable(object):
         return type(self) is type(other) and self.table_group_key == other.table_group_key
 
     def __str__(self):
-        return '{}: {} - {}, {}'.format(
+        return '{}: {} - {}, {} - {}'.format(
             self.__class__.__name__,
             self.table_group_key.tables_root_dir,
             self.table_group_key.wmo_tables_sn,
+            self.table_group_key.tables_local_dir,
             self.table_group_key.local_tables_sn
         )
 
@@ -178,7 +182,7 @@ class BaseTable(object):
     @property
     def tables_dir_local(self):
         return (
-            os.path.join(os.path.join(self.table_group_key.tables_root_dir, *self.table_group_key.local_tables_sn))
+            os.path.join(os.path.join(self.table_group_key.tables_local_dir, *self.table_group_key.local_tables_sn))
             if self.table_group_key.local_tables_sn else None
         )
 
@@ -366,10 +370,11 @@ class BufrTableGroup(_BufrTableGroup):
         )
 
     def __str__(self):
-        return '<{}: {!r} - {}, {}>'.format(
+        return '<{}: {!r} - {}, {!r} - {}>'.format(
             self.__class__.__name__,
             self.A.tables_root_dir,
             self.A.wmo_tables_sn,
+            self.A.tables_local_dir,
             self.A.local_tables_sn,
         )
 
@@ -523,6 +528,7 @@ class TableGroupCacheManager(object):
     @classmethod
     def get_table_group(cls,
                         tables_root_dir=None,
+                        tables_local_dir=None,
                         master_table_number=None,
                         originating_centre=None,
                         originating_subcentre=None,
@@ -539,6 +545,7 @@ class TableGroupCacheManager(object):
         :param master_table_version:
         :param local_table_version:
         :param str tables_root_dir: Root directory to read the BUFR tables
+        :param str tables_local_dir: Root directory to read the local BUFR tables
         :param int|bool normalize: Whether the program tries to fix non-exist tables SN by
                           using default values. This is generally useful for
                           decoding. But could be misleading when encoding.
@@ -546,10 +553,12 @@ class TableGroupCacheManager(object):
         """
 
         tables_root_dir = tables_root_dir or DEFAULT_TABLES_DIR
+        tables_local_dir = tables_local_dir or tables_root_dir
 
         if normalize:
             wmo_tables_sn, local_tables_sn = normalize_tables_sn(
                 tables_root_dir,
+                tables_local_dir,
                 master_table_number or DEFAULT_MASTER_TABLE_NUMBER,
                 originating_centre or DEFAULT_ORIGINATING_CENTRE,
                 originating_subcentre or DEFAULT_ORIGINATING_SUBCENTRE,
@@ -565,7 +574,7 @@ class TableGroupCacheManager(object):
                 local_table_version
             )
 
-        table_group_key = TableGroupKey(tables_root_dir, wmo_tables_sn, local_tables_sn)
+        table_group_key = TableGroupKey(tables_root_dir, tables_local_dir, wmo_tables_sn, local_tables_sn)
 
         # TODO: catch error on file reading?
         return TableGroupCacheManager.get_table_group_by_key(table_group_key)
