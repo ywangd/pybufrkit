@@ -340,10 +340,10 @@ class BufrMessage(object):
         self._edition = None
         # Default to zero for edition 1 which does not have this parameter
         self._master_table_number = SectionParameter('master_table_number',
-                                                     0, 'unit', None, True, 0)
+                                                     0, 'unit', None, True, value=0)
         # Default to zero for edition 1 and 2 which do not have this parameter
         self._originating_subcentre = SectionParameter('originating_subcentre',
-                                                       0, 'unit', None, True, 0)
+                                                       0, 'unit', None, True, value=0)
 
     def add_section(self, section):
         """
