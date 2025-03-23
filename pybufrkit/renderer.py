@@ -432,7 +432,7 @@ class NestedTextRenderer(Renderer):
             description = decoded_node.__class__.__name__[:-4]
 
         ret = [
-            '{}{}{} {} {!r}'.format(
+            '{}{}{} {} = {!r}'.format(
                 indent,
                 '-> ' if is_attribute else '',
                 descriptor,
