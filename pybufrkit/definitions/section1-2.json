@@ -90,10 +90,11 @@
       "as_property": true
     },
     {
-      "name": "second",
-      "nbits": 8,
-      "type": "uint",
-      "as_property": true
+      "name": "local_bytes",
+      "nbits": 0,
+      "type": "bytes",
+      "as_property": true,
+      "optional": true
     }
   ]
 }
