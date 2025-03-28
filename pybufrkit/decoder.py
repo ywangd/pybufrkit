@@ -6,12 +6,16 @@ pybufrkit.decoder
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys
 import functools
 import logging
+import sys
+
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
+from pybufrkit.bitops import get_bit_reader
+from pybufrkit.bufr import BufrMessage
+from pybufrkit.coder import Coder, CoderState
 from pybufrkit.constants import (BITPOS_START,
                                  MESSAGE_START_SIGNATURE,
                                  NBITS_FOR_NBITS_DIFF,
@@ -19,15 +23,12 @@ from pybufrkit.constants import (BITPOS_START,
                                  NUMERIC_MISSING_VALUES,
                                  PARAMETER_TYPE_TEMPLATE_DATA,
                                  PARAMETER_TYPE_UNEXPANDED_DESCRIPTORS)
-from pybufrkit.errors import PyBufrKitError
-from pybufrkit.bitops import get_bit_reader
-from pybufrkit.bufr import BufrMessage
-from pybufrkit.tables import TableGroupCacheManager
-from pybufrkit.templatedata import TemplateData
-from pybufrkit.coder import Coder, CoderState
 from pybufrkit.dataprocessor import BufrTableDefinitionProcessor
-from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
+from pybufrkit.errors import PyBufrKitError
 from pybufrkit.script import ScriptRunner
+from pybufrkit.tables import TableGroupCacheManager
+from pybufrkit.templatecompiler import CompiledTemplateManager, process_compiled_template
+from pybufrkit.templatedata import TemplateData
 
 __all__ = ['Decoder', 'generate_bufr_message']
 
@@ -417,49 +418,53 @@ def generate_bufr_message(decoder, s, info_only=False, continue_on_error=False, 
     """
     sr = ScriptRunner(filter_expr, mode='eval') if filter_expr is not None else None
     idx_start = 0
-    while idx_start < len(s):
-        idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
-        if idx_start < 0:
-            return
-        try:
-            matched = True
-            if filter_expr:
-                bufr_message = decoder.process(
-                    s[idx_start:], start_signature=None, info_only=True, *args, **kwargs
-                )
-                matched = sr.run(bufr_message)
-                if matched and not info_only:
+    try:
+        while idx_start < len(s):
+            idx_start = s.find(MESSAGE_START_SIGNATURE, idx_start)
+            if idx_start < 0:
+                return
+            try:
+                matched = True
+                if filter_expr:
                     bufr_message = decoder.process(
-                        s[idx_start:], start_signature=None, info_only=False, *args, **kwargs
+                        s[idx_start:], start_signature=None, info_only=True, *args, **kwargs
                     )
-            else:
-                bufr_message = decoder.process(
-                    s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
-                )
-            # If data section is not decoded, we rely on the declared length for the message length
-            if info_only:
-                bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
-            else:
-                if (bufr_message.data_category.value == DATA_CATEGORY_DEFINE_BUFR_TABLES
-                        and bufr_message.n_subsets.value > 0):
-                    _, b_entries, d_entries = BufrTableDefinitionProcessor().process(bufr_message)
-                    TableGroupCacheManager.invalidate()
-                    TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
-            idx_start += len(bufr_message.serialized_bytes)
-
-            if matched:
-                yield bufr_message
-
-        except PyBufrKitError as e:
-            if not continue_on_error:
-                raise e
-            print('Continuing on next message and ignoring error: {}'.format(e), file=sys.stderr)
-            if info_only:
-                idx_start += 1
-            else:
-                try:
+                    matched = sr.run(bufr_message)
+                    if matched and not info_only:
+                        bufr_message = decoder.process(
+                            s[idx_start:], start_signature=None, info_only=False, *args, **kwargs
+                        )
+                else:
                     bufr_message = decoder.process(
-                        s[idx_start:], start_signature=None, info_only=True, *args, **kwargs)
-                    idx_start += bufr_message.length.value
-                except PyBufrKitError:
+                        s[idx_start:], start_signature=None, info_only=info_only, *args, **kwargs
+                    )
+                # If data section is not decoded, we rely on the declared length for the message length
+                if info_only:
+                    bufr_message.serialized_bytes = s[idx_start: idx_start + bufr_message.length.value]
+                else:
+                    if (bufr_message.data_category.value == DATA_CATEGORY_DEFINE_BUFR_TABLES
+                            and bufr_message.n_subsets.value > 0):
+                        _, b_entries, d_entries = BufrTableDefinitionProcessor().process(bufr_message)
+                        TableGroupCacheManager.invalidate()
+                        TableGroupCacheManager.add_extra_entries(b_entries, d_entries)
+                idx_start += len(bufr_message.serialized_bytes)
+
+                if matched:
+                    yield bufr_message
+
+            except PyBufrKitError as e:
+                if not continue_on_error:
+                    raise e
+                print('Continuing on next message and ignoring error: {}'.format(e), file=sys.stderr)
+                if info_only:
                     idx_start += 1
+                else:
+                    try:
+                        bufr_message = decoder.process(
+                            s[idx_start:], start_signature=None, info_only=True, *args, **kwargs)
+                        idx_start += bufr_message.length.value
+                    except PyBufrKitError:
+                        idx_start += 1
+    finally:
+        if TableGroupCacheManager.has_extra_entries():
+            TableGroupCacheManager.clear_extra_entries()

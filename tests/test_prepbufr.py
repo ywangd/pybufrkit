@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import logging
 import os
 import sys
-import logging
 import unittest
 
 from pybufrkit.decoder import Decoder, generate_bufr_message
@@ -29,7 +29,7 @@ compare = """  405 012004 T2MS     TABLE B ENTRY - 2-METER TEMPERATURE          
 """
 
 
-class BenchMarkTests(unittest.TestCase):
+class PrepBufrTests(unittest.TestCase):
     def setUp(self):
         self.decoder = Decoder()
 

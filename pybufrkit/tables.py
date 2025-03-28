@@ -498,6 +498,10 @@ class TableGroupCache(object):
         self.extra_b_entries.update(b_entries)
         self.extra_d_entries.update(d_entries)
 
+    def clear_extra_entries(self):
+        self.extra_b_entries.clear()
+        self.extra_d_entries.clear()
+
 
 class TableGroupCacheManager(object):
     _TABLE_GROUP_CACHE = TableGroupCache()
@@ -513,6 +517,10 @@ class TableGroupCacheManager(object):
     @classmethod
     def add_extra_entries(cls, b_entries, d_entries):
         cls._TABLE_GROUP_CACHE.add_extra_entries(b_entries, d_entries)
+
+    @classmethod
+    def clear_extra_entries(cls):
+        cls._TABLE_GROUP_CACHE.clear_extra_entries()
 
     @classmethod
     def get_table_group_by_key(cls, table_group_key):
