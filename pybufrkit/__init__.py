@@ -34,7 +34,7 @@ from pybufrkit.errors import (BitReadError,
                               UnknownDescriptor,
                               PyBufrKitError)
 
-__version__ = '0.2.24'
+__version__ = '0.2.25'
 __author__ = 'ywangd@gmail.com'
 
 LOGGER = logging.getLogger('PyBufrKit')
