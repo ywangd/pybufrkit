@@ -37,6 +37,7 @@ def command_decode(ns):
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'),
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     def show_message(m):
@@ -80,7 +81,8 @@ def command_info(ns):
     flat_text_render = FlatTextRenderer()
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
-                      tables_local_dir=ns.tables_local_directory)
+                      tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'))
 
     def show_message_info(m):
         bufr_template, table_group = m.build_template(
@@ -118,6 +120,7 @@ def command_encode(ns):
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table == 'all'),
                       compiled_template_cache_max=ns.compiled_template_cache_max,
                       master_table_version=ns.master_table_version)
     if ns.filename != '-':
@@ -164,7 +167,8 @@ def command_split(ns):
     """
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
-                      tables_local_dir=ns.tables_local_directory)
+                      tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'))
 
     for filename in ns.filenames:
         with open(filename, 'rb') as ins:
@@ -189,7 +193,8 @@ def command_lookup(ns):
                                                          ns.originating_centre,
                                                          ns.originating_subcentre,
                                                          ns.master_table_version,
-                                                         ns.local_table_version)
+                                                         ns.local_table_version,
+                                                         normalize=(ns.fallback_or_ignore_missing_table != 'none'))
     flat_text_render = FlatTextRenderer()
     table_group.B.load_code_and_flag()  # load the code and flag tables for additional details
     descriptors = table_group.descriptors_from_ids(
@@ -230,7 +235,8 @@ def command_compile(ns):
     if os.path.exists(ns.input):
         decoder = Decoder(definitions_dir=ns.definitions_directory,
                           tables_root_dir=ns.tables_root_directory,
-                          tables_local_dir=ns.tables_local_directory)
+                          tables_local_dir=ns.tables_local_directory,
+                          fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'))
         with open(ns.input, 'rb') as ins:
             bufr_message = decoder.process(ins.read(), file_path=ns.input, info_only=True)
             template, table_group = bufr_message.build_template(ns.tables_root_directory,
@@ -257,10 +263,12 @@ def command_subset(ns):
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'),
                       compiled_template_cache_max=ns.compiled_template_cache_max)
     encoder = Encoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table == 'all'),
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     subset_indices = [int(x) for x in ns.subset_indices.split(',')]
@@ -284,6 +292,7 @@ def command_query(ns):
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'),
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     for filename in ns.filenames:
@@ -335,6 +344,7 @@ def command_script(ns):
     decoder = Decoder(definitions_dir=ns.definitions_directory,
                       tables_root_dir=ns.tables_root_directory,
                       tables_local_dir=ns.tables_local_directory,
+                      fallback_or_ignore_missing_table=(ns.fallback_or_ignore_missing_table != 'none'),
                       compiled_template_cache_max=ns.compiled_template_cache_max)
 
     for filename in ns.filenames:

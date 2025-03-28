@@ -266,11 +266,13 @@ class Coder(object):
     def __init__(self,
                  definitions_dir=None,
                  tables_root_dir=None,
-                 tables_local_dir=None):
+                 tables_local_dir=None,
+                 fallback_or_ignore_missing_table=True):
 
         self.section_configurer = SectionConfigurer(definitions_dir=definitions_dir)
         self.tables_root_dir = tables_root_dir or DEFAULT_TABLES_DIR
         self.tables_local_dir = tables_local_dir or self.tables_root_dir
+        self.fallback_or_ignore_missing_table = fallback_or_ignore_missing_table
 
     @abc.abstractmethod
     def process(self, *args, **kwargs):

@@ -45,9 +45,10 @@ class Decoder(Coder):
                  definitions_dir=None,
                  tables_root_dir=None,
                  tables_local_dir=None,
+                 fallback_or_ignore_missing_table=True,
                  compiled_template_cache_max=None):
 
-        super(Decoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir)
+        super(Decoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir, fallback_or_ignore_missing_table)
 
         # Only enable template compilation if cache is requested
         if compiled_template_cache_max is not None:
@@ -185,8 +186,8 @@ class Decoder(Coder):
         :param bit_reader:
         :return: TemplateData decoded from the bit stream.
         """
-        # TODO: Parametrise the "normalize" argument
-        bufr_template, table_group = bufr_message.build_template(self.tables_root_dir, self.tables_local_dir, normalize=1)
+        bufr_template, table_group = bufr_message.build_template(
+            self.tables_root_dir, self.tables_local_dir, normalize=self.fallback_or_ignore_missing_table)
 
         state = CoderState(bufr_message.is_compressed.value, bufr_message.n_subsets.value)
 

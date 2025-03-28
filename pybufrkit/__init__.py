@@ -69,6 +69,12 @@ def main():
     ap.add_argument('-p', '--tables-local-provider',
                     help='The provider for local BUFR tables')
 
+    ap.add_argument('-f', '--fallback-or-ignore-missing-tables',
+                    choices=['except-encode', 'all', 'none'],
+                    default='except-encode',
+                    help='The commands to allow fallback or ignore missing tables. Default is except-encode, '
+                         'i.e. all commands except encode')
+
     subparsers = ap.add_subparsers(
         dest='command',
         title='List of commands',
