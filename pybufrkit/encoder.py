@@ -57,13 +57,13 @@ class Encoder(Coder):
                  definitions_dir=None,
                  tables_root_dir=None,
                  tables_local_dir=None,
-                 fallback_or_ignore_missing_table=False,
+                 fallback_or_ignore_missing_tables=False,
                  ignore_declared_length=True,
                  compiled_template_cache_max=None,
                  master_table_number=None,
                  master_table_version=None):
 
-        super(Encoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir, fallback_or_ignore_missing_table)
+        super(Encoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir, fallback_or_ignore_missing_tables)
         self.ignore_declared_length = ignore_declared_length
         self.overrides = {}
         if master_table_number:
@@ -225,7 +225,7 @@ class Encoder(Coder):
         :return:
         """
         bufr_template, table_group = bufr_message.build_template(
-            self.tables_root_dir, self.tables_local_dir, normalize=self.fallback_or_ignore_missing_table)
+            self.tables_root_dir, self.tables_local_dir, normalize=self.fallback_or_ignore_missing_tables)
 
         state = CoderState(bufr_message.is_compressed.value, bufr_message.n_subsets.value, section_parameter.value)
 

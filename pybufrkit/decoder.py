@@ -45,10 +45,10 @@ class Decoder(Coder):
                  definitions_dir=None,
                  tables_root_dir=None,
                  tables_local_dir=None,
-                 fallback_or_ignore_missing_table=True,
+                 fallback_or_ignore_missing_tables=True,
                  compiled_template_cache_max=None):
 
-        super(Decoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir, fallback_or_ignore_missing_table)
+        super(Decoder, self).__init__(definitions_dir, tables_root_dir, tables_local_dir, fallback_or_ignore_missing_tables)
 
         # Only enable template compilation if cache is requested
         if compiled_template_cache_max is not None:
@@ -187,7 +187,7 @@ class Decoder(Coder):
         :return: TemplateData decoded from the bit stream.
         """
         bufr_template, table_group = bufr_message.build_template(
-            self.tables_root_dir, self.tables_local_dir, normalize=self.fallback_or_ignore_missing_table)
+            self.tables_root_dir, self.tables_local_dir, normalize=self.fallback_or_ignore_missing_tables)
 
         state = CoderState(bufr_message.is_compressed.value, bufr_message.n_subsets.value)
 
@@ -244,7 +244,10 @@ class Decoder(Coder):
 
     def process_numeric_uncompressed(self, state, bit_reader, descriptor, nbits, scale_powered, refval):
         state.decoded_descriptors.append(descriptor)
-        value = bit_reader.read_uint_or_none(nbits)
+        if descriptor.X == 31:
+            value = bit_reader.read_uint(nbits)
+        else:
+            value = bit_reader.read_uint_or_none(nbits)
         if value is not None:
             if refval:
                 value += refval
@@ -254,7 +257,10 @@ class Decoder(Coder):
 
     def process_numeric_compressed(self, state, bit_reader, descriptor, nbits_min_value, scale_powered, refval):
         state.decoded_descriptors.append(descriptor)
-        min_value = bit_reader.read_uint_or_none(nbits_min_value)
+        if descriptor.X == 31:
+            min_value = bit_reader.read_uint(nbits_min_value)
+        else:
+            min_value = bit_reader.read_uint_or_none(nbits_min_value)
         nbits_diff = bit_reader.read_uint(NBITS_FOR_NBITS_DIFF)
 
         # special cases: all missing or all equals
