@@ -19,8 +19,8 @@ list of some of the features:
 * Comprehensive query support for BUFR messages
 * Script support enables flexible extensions, e.g. filtering through large number of files.
 * Tested with the same set of BUFR files used by
-  `ecCodes <https://software.ecmwf.int/wiki/display/ECC/ecCodes+Home>`_
-  and `BUFRDC <https://software.ecmwf.int/wiki/display/BUFR/BUFRDC+Home>`_.
+  `ecCodes <https://confluence.ecmwf.int/display/ECC/ecCodes%2BHome>`_
+  and `BUFRDC <https://confluence.ecmwf.int/display/BUFR/BUFRDC+Home>`_.
 
 More documentation at http://pybufrkit.readthedocs.io/
 
